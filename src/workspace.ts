@@ -6,6 +6,8 @@ import { GitOps } from "./git-ops.js";
 const worktreeMutex = new Mutex();
 
 export class Workspace {
+  private _git?: GitOps;
+
   private constructor(
     public originPath: string,
     public wsPath: string,
@@ -29,7 +31,7 @@ export class Workspace {
   }
 
   get git(): GitOps {
-    return new GitOps(this.wsPath);
+    return this._git ??= new GitOps(this.wsPath);
   }
 
   async harvestUncommitted(): Promise<boolean> {

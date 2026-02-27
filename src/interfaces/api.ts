@@ -4,6 +4,7 @@ import { parseTaskCommand } from "../messaging.js";
 export class APIInterface extends InterfaceAdapter {
   private server: any;
   private pendingResponses = new Map<string, (value: string) => void>();
+  private messageLog = new Map<string, string[]>();
 
   constructor(callback: MessageCallback) {
     super(callback);
@@ -49,11 +50,20 @@ export class APIInterface extends InterfaceAdapter {
       }
     });
 
-    this.server = app.listen(3000, () => console.log("API server on port 3000"));
+    app.get("/messages/:chatId", (req: any, res: any) => {
+      const messages = this.messageLog.get(req.params.chatId) ?? [];
+      res.json({ messages });
+    });
+
+    const port = Number(process.env["API_PORT"]) || 3000;
+    this.server = app.listen(port, () => console.log(`API server on port ${port}`));
   }
 
-  async sendMessage(_chatId: string, _text: string): Promise<void> {
-    // API responses are fire-and-forget; clients poll /status
+  async sendMessage(chatId: string, text: string): Promise<void> {
+    // Store messages for retrieval via GET /messages/:chatId
+    const log = this.messageLog.get(chatId) ?? [];
+    log.push(text);
+    this.messageLog.set(chatId, log);
   }
 
   async waitForResponse(chatId: string, timeout = 300_000): Promise<string> {

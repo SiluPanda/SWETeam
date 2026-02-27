@@ -46,15 +46,13 @@ export class CLIInterface extends InterfaceAdapter {
 
   async waitForResponse(_chatId: string, timeout = 300_000): Promise<string> {
     return new Promise((resolve, reject) => {
-      this.pendingResolve = resolve;
       const timer = setTimeout(() => {
         this.pendingResolve = null;
         reject(new Error("Response timeout"));
       }, timeout);
-      const origResolve = this.pendingResolve;
       this.pendingResolve = (value: string) => {
         clearTimeout(timer);
-        origResolve(value);
+        resolve(value);
       };
     });
   }

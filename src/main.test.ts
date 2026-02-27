@@ -82,11 +82,8 @@ agent:
 
   it("shutdown is callable", async () => {
     const team = new SWETeam();
-    // Mock process.exit to prevent test from actually exiting
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {}) as any);
     await team.setup();
+    // shutdown should resolve gracefully without calling process.exit
     await team.shutdown();
-    expect(exitSpy).toHaveBeenCalledWith(0);
-    exitSpy.mockRestore();
   });
 });

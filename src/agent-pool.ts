@@ -9,7 +9,7 @@ export class AgentPoolManager {
 
   async spawn(
     count: number, originPath: string, workspacesBase: string,
-    runId: string, branch: string, baseRef: string,
+    runId: number, branch: string, baseRef: string,
   ): Promise<void> {
     const n = Math.min(count, this.maxAgents);
     for (let i = 0; i < n; i++) {

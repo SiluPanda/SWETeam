@@ -150,6 +150,11 @@ export class WorkflowRunner {
     if (!branchOk) {
       throw new Error(`Branch mismatch in workspace ${run.workspacePath}: expected ${run.workingBranch}`);
     }
+    // Stash any leftovers from a prior crashed run
+    const status = await ws.git.status();
+    if (status) {
+      try { await ws.git.stash(); } catch { /* ignore if nothing to stash */ }
+    }
     this.state.advanceWorkflow(runId, WorkflowStep.BRANCH_CREATED);
   }
 
@@ -250,7 +255,7 @@ export class WorkflowRunner {
       agentCount,
       originPath,
       this.config.repos.workspacesPath,
-      String(runId),
+      runId,
       run.workingBranch ?? "",
       run.baseBranch ?? "main",
     );
@@ -270,37 +275,48 @@ export class WorkflowRunner {
     const groups = planResult.parallelGroups ?? [subtasks.map(s => s.externalId!)];
     const startGroup = run.currentParallelGroup ?? 0;
 
+    const agentCount = this.pool?.getAgentIds().length ?? 1;
+
     for (let g = startGroup; g < groups.length; g++) {
       if (this._isCancelled(runId)) return;
       const group = groups[g]!;
 
-      const results = await Promise.allSettled(
-        group.map(taskId => {
-          const subtask = subtaskMap.get(taskId);
-          if (!subtask || subtask.status === TaskStatus.COMPLETED) return Promise.resolve();
-          return this._executeSubtask(runId, subtask, repoName);
-        }),
-      );
+      // Split large groups into chunks matching the available agent count
+      // to prevent multiple concurrent tasks on the same agent workspace
+      const chunks: string[][] = [];
+      for (let i = 0; i < group.length; i += agentCount) {
+        chunks.push(group.slice(i, i + agentCount));
+      }
 
-      // Handle failures per policy
-      for (let ri = 0; ri < results.length; ri++) {
-        const result = results[ri]!;
-        if (result.status === "rejected") {
-          const policy = this.config.agent.onSubtaskFailure;
-          if (policy === "stop") throw new Error(`Subtask failed: ${result.reason}`);
-          if (policy === "retry") {
-            // Retry once with error context
-            const taskId = group[ri]!;
+      for (const chunk of chunks) {
+        const results = await Promise.allSettled(
+          chunk.map(taskId => {
             const subtask = subtaskMap.get(taskId);
-            if (subtask && subtask.status !== TaskStatus.COMPLETED) {
-              try {
-                await this._executeSubtask(runId, subtask, repoName);
-              } catch {
-                // Retry failed, continue to next subtask
+            if (!subtask || subtask.status === TaskStatus.COMPLETED) return Promise.resolve();
+            return this._executeSubtask(runId, subtask, repoName);
+          }),
+        );
+
+        // Handle failures per policy
+        for (let ri = 0; ri < results.length; ri++) {
+          const result = results[ri]!;
+          if (result.status === "rejected") {
+            const policy = this.config.agent.onSubtaskFailure;
+            if (policy === "stop") throw new Error(`Subtask failed: ${result.reason}`);
+            if (policy === "retry") {
+              // Retry once with error context
+              const taskId = chunk[ri]!;
+              const subtask = subtaskMap.get(taskId);
+              if (subtask && subtask.status !== TaskStatus.COMPLETED) {
+                try {
+                  await this._executeSubtask(runId, subtask, repoName);
+                } catch {
+                  // Retry failed, continue to next subtask
+                }
               }
             }
+            // "continue" just moves on
           }
-          // "continue" just moves on
         }
       }
 

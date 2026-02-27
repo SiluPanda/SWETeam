@@ -20,6 +20,7 @@ export class SWETeam {
   private iface!: InterfaceAdapter;
   private runners = new Map<number, WorkflowRunner>();
   private running = false;
+  private shutdownResolve?: () => void;
 
   constructor() {
     this.config = getConfig();
@@ -98,10 +99,17 @@ export class SWETeam {
         this.state.cancelRun(run.id);
         console.log(`Timed out stale run #${run.id}`);
       } else {
-        console.log(`Resuming incomplete run #${run.id}`);
-        // We need the repo name to resume; get it from DB
-        // For now, mark as failed since we can't safely resume without more context
-        this.state.cancelRun(run.id);
+        // Resolve repo name from repoId to resume the workflow
+        const repo = this.state.getRepoById(run.repoId);
+        if (!repo) {
+          console.log(`Cannot resume run #${run.id}: repo not found`);
+          this.state.cancelRun(run.id);
+          continue;
+        }
+        console.log(`Resuming incomplete run #${run.id} for ${repo.name}`);
+        this.executeWorkflow(run.id, repo.name).catch(err => {
+          console.error(`Resume of run #${run.id} failed:`, err);
+        });
       }
     }
   }
@@ -117,24 +125,31 @@ export class SWETeam {
 
     await this.iface.start();
     await this.recoverIncompleteRuns();
+
+    // Keep the process alive until shutdown is called
+    await new Promise<void>(resolve => {
+      this.shutdownResolve = resolve;
+    });
   }
 
   async shutdown(): Promise<void> {
     this.running = false;
     console.log("\nShutting down...");
 
-    // Cancel active workflows
+    // Cancel active workflows and signal abort
     for (const [runId, runner] of this.runners) {
       runner.cancel(runId);
     }
-    for (const [_, controller] of this.activeTasks) {
+    for (const [, controller] of this.activeTasks) {
       controller.abort();
     }
 
     // Stop interface
     try { await this.iface?.stop(); } catch { /* ignore */ }
 
+    // Resolve the keep-alive promise to let run() exit
+    this.shutdownResolve?.();
+
     console.log("Shutdown complete.");
-    process.exit(0);
   }
 }
