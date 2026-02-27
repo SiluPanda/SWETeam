@@ -9,7 +9,7 @@ import { Workspace } from "./workspace.js";
 import { AgentPoolManager } from "./agent-pool.js";
 import {
   formatTaskReceived, formatPlanning, formatPlanCreated, formatProgress,
-  formatReview, formatError, formatCompleted, formatClarifying, isAffirmative,
+  formatReview, formatError, formatCompleted, formatClarifying,
 } from "./messaging.js";
 
 const STEP_ORDER: Record<string, number> = {
@@ -187,7 +187,7 @@ export class WorkflowRunner {
         this._send(runId, "Are you satisfied with the requirement? (yes to proceed)");
         const confirmation = await this.iface.waitForResponse(run.chatId ?? "");
 
-        if (isAffirmative(confirmation)) {
+        if (await this.architect.isAffirmative(confirmation)) {
           this.state.advanceWorkflow(runId, WorkflowStep.CLARIFIED, {
             userRequest: result.message,
             clarificationLog: JSON.stringify(history),

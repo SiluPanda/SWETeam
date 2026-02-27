@@ -49,6 +49,17 @@ export abstract class CLIBackend {
     return stdout;
   }
 
+  async classifyAffirmative(userResponse: string): Promise<boolean> {
+    const prompt = `Does the following user response express agreement, approval, or confirmation? Answer with ONLY "true" or "false".\n\nUser response: "${userResponse}"`;
+    const { bin, args } = this.buildCommand(prompt);
+    try {
+      const stdout = await execFileAsync(bin, args, { timeout: 30_000 });
+      return /true/i.test(this.parseOutput(stdout).trim());
+    } catch {
+      return false;
+    }
+  }
+
   async checkAvailable(): Promise<boolean> {
     try {
       await execFileAsync(this.binaryName(), ["--version"], { timeout: 10_000 });

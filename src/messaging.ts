@@ -38,10 +38,6 @@ export function formatCompleted(repo: string, prUrl: string): string {
   return `[${repo}] Done! PR: ${prUrl}`;
 }
 
-export function isAffirmative(text: string): boolean {
-  return /^(yes|y|yeah|sure|proceed|confirm|done)$/i.test(text.trim());
-}
-
 export function formatProgressBar(done: number, total: number, width = 10): string {
   const pct = total === 0 ? 0 : Math.round((done / total) * 100);
   const filled = total === 0 ? 0 : Math.round((done / total) * width);

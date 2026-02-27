@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   parseTaskCommand, formatTaskReceived, formatPlanning, formatClarifying,
   formatPlanCreated, formatProgress, formatReview, formatError,
-  formatCompleted, isAffirmative, formatProgressBar, formatStatus, formatList,
+  formatCompleted, formatProgressBar, formatStatus, formatList,
 } from "./messaging.js";
 
 describe("messaging", () => {
@@ -66,24 +66,6 @@ describe("messaging", () => {
 
     it("formatCompleted", () => {
       expect(formatCompleted("o/r", "https://gh.com/pr/1")).toBe("[o/r] Done! PR: https://gh.com/pr/1");
-    });
-  });
-
-  describe("isAffirmative", () => {
-    it.each(["yes", "y", "Yeah", "SURE", "proceed", "confirm", "done"])(
-      "returns true for %s", (input) => {
-        expect(isAffirmative(input)).toBe(true);
-      }
-    );
-
-    it.each(["no", "nope", "hello", "maybe", ""])(
-      "returns false for %s", (input) => {
-        expect(isAffirmative(input)).toBe(false);
-      }
-    );
-
-    it("trims whitespace", () => {
-      expect(isAffirmative("  yes  ")).toBe(true);
     });
   });
 

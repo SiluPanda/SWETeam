@@ -39,4 +39,8 @@ export abstract class BaseAgent {
     const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
     return this.cli.invoke(fullPrompt, cwd);
   }
+
+  async isAffirmative(userResponse: string): Promise<boolean> {
+    return this.cli.classifyAffirmative(userResponse);
+  }
 }
