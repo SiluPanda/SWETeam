@@ -13,7 +13,7 @@ export class AgentPoolManager {
   ): Promise<void> {
     const n = Math.min(count, this.maxAgents);
     for (let i = 0; i < n; i++) {
-      const agentId = `swe-${i}`;
+      const agentId = `agent-${i}`;
       const agentBranch = `${branch}-${agentId}`;
       const ws = await Workspace.create(originPath, workspacesBase, `${runId}-${agentId}`, agentBranch, baseRef);
       const agent = new SWEAgent(agentId);

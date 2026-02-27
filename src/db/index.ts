@@ -10,6 +10,8 @@ export function initDb(dbPath: string) {
   sqlite.pragma("journal_mode = WAL");
 
   // Create tables if not exist
+  // IMPORTANT: Keep this SQL in sync with the Drizzle schema in schema.ts.
+  // Both define the same tables -- the SQL creates them, the schema types them.
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS repos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

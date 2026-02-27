@@ -31,14 +31,14 @@ describe("AgentPoolManager", () => {
   it("spawns N agents with worktrees", async () => {
     const pool = new AgentPoolManager(4);
     const mainBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: repoDir }).toString().trim();
-    await pool.spawn(2, repoDir, wsBase, "run1", "test-branch", mainBranch);
+    await pool.spawn(2, repoDir, wsBase, 1, "test-branch", mainBranch);
 
-    expect(pool.getAgent("swe-0")).toBeInstanceOf(SWEAgent);
-    expect(pool.getAgent("swe-1")).toBeInstanceOf(SWEAgent);
-    expect(pool.getAgent("swe-2")).toBeUndefined();
+    expect(pool.getAgent("agent-0")).toBeInstanceOf(SWEAgent);
+    expect(pool.getAgent("agent-1")).toBeInstanceOf(SWEAgent);
+    expect(pool.getAgent("agent-2")).toBeUndefined();
 
-    const ws0 = pool.getWorkspace("swe-0")!;
-    const ws1 = pool.getWorkspace("swe-1")!;
+    const ws0 = pool.getWorkspace("agent-0")!;
+    const ws1 = pool.getWorkspace("agent-1")!;
     expect(fs.existsSync(ws0.wsPath)).toBe(true);
     expect(fs.existsSync(ws1.wsPath)).toBe(true);
 
@@ -48,7 +48,7 @@ describe("AgentPoolManager", () => {
   it("respects maxAgents limit", async () => {
     const pool = new AgentPoolManager(1);
     const mainBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: repoDir }).toString().trim();
-    await pool.spawn(5, repoDir, wsBase, "run2", "test-branch", mainBranch);
+    await pool.spawn(5, repoDir, wsBase, 2, "test-branch", mainBranch);
 
     expect(pool.getAgentIds()).toHaveLength(1);
     await pool.cleanup();
@@ -57,7 +57,7 @@ describe("AgentPoolManager", () => {
   it("assigns tasks round-robin", async () => {
     const pool = new AgentPoolManager(4);
     const mainBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: repoDir }).toString().trim();
-    await pool.spawn(2, repoDir, wsBase, "run3", "test-branch", mainBranch);
+    await pool.spawn(2, repoDir, wsBase, 3, "test-branch", mainBranch);
 
     const tasks = [
       { id: 1, externalId: "t1" },
@@ -68,9 +68,9 @@ describe("AgentPoolManager", () => {
     const assignments = pool.assignTasks(tasks);
     expect(assignments).toHaveLength(3);
     // Round-robin: agent 0, 1, 0
-    expect(assignments[0]![0].agentId).toBe("swe-0");
-    expect(assignments[1]![0].agentId).toBe("swe-1");
-    expect(assignments[2]![0].agentId).toBe("swe-0");
+    expect(assignments[0]![0].agentId).toBe("agent-0");
+    expect(assignments[1]![0].agentId).toBe("agent-1");
+    expect(assignments[2]![0].agentId).toBe("agent-0");
 
     await pool.cleanup();
   });
@@ -78,10 +78,10 @@ describe("AgentPoolManager", () => {
   it("cleans up all worktrees", async () => {
     const pool = new AgentPoolManager(4);
     const mainBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: repoDir }).toString().trim();
-    await pool.spawn(2, repoDir, wsBase, "run4", "test-branch", mainBranch);
+    await pool.spawn(2, repoDir, wsBase, 4, "test-branch", mainBranch);
 
-    const ws0Path = pool.getWorkspace("swe-0")!.wsPath;
-    const ws1Path = pool.getWorkspace("swe-1")!.wsPath;
+    const ws0Path = pool.getWorkspace("agent-0")!.wsPath;
+    const ws1Path = pool.getWorkspace("agent-1")!.wsPath;
     expect(fs.existsSync(ws0Path)).toBe(true);
     expect(fs.existsSync(ws1Path)).toBe(true);
 

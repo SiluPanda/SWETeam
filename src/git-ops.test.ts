@@ -6,24 +6,26 @@ import path from "node:path";
 import os from "node:os";
 
 describe("inferGithubRepoSpec", () => {
-  it("handles owner/repo format", () => {
-    expect(inferGithubRepoSpec("owner/repo")).toBe("owner/repo");
+  it("handles owner/repo format", async () => {
+    expect(await inferGithubRepoSpec("owner/repo")).toBe("owner/repo");
   });
 
-  it("handles HTTPS URL", () => {
-    expect(inferGithubRepoSpec("https://github.com/owner/repo")).toBe("owner/repo");
+  it("handles HTTPS URL", async () => {
+    expect(await inferGithubRepoSpec("https://github.com/owner/repo")).toBe("owner/repo");
   });
 
-  it("handles HTTPS URL with .git suffix", () => {
-    expect(inferGithubRepoSpec("https://github.com/owner/repo.git")).toBe("owner/repo");
+  it("handles HTTPS URL with .git suffix", async () => {
+    expect(await inferGithubRepoSpec("https://github.com/owner/repo.git")).toBe("owner/repo");
   });
 
-  it("handles SSH URL", () => {
-    expect(inferGithubRepoSpec("git@github.com:owner/repo")).toBe("owner/repo");
+  it("handles SSH URL", async () => {
+    expect(await inferGithubRepoSpec("git@github.com:owner/repo")).toBe("owner/repo");
   });
 
-  it("handles bare name", () => {
-    expect(inferGithubRepoSpec("myrepo")).toBe("myrepo");
+  it("handles bare name", async () => {
+    // Without gh auth, falls back to returning bare name
+    const result = await inferGithubRepoSpec("myrepo");
+    expect(result).toContain("myrepo");
   });
 });
 

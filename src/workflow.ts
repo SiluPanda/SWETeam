@@ -116,11 +116,12 @@ export class WorkflowRunner {
 
     const result = await getOrCreateRepo(repoName, this.config.repos.basePath);
 
-    // Store repo info in state DB
+    // Store repo info in state DB and link repoId to the workflow run
     const repo = this.state.getOrCreateRepo(
       repoName, result.repoPath, result.repoUrl, result.repoSpec, result.baseBranch,
     );
     this.state.advanceWorkflow(runId, WorkflowStep.REPO_SYNC, {
+      repoId: repo.id,
       baseBranch: result.baseBranch,
     });
   }
@@ -345,7 +346,9 @@ export class WorkflowRunner {
     try { files = JSON.parse(subtask.filesToModify ?? "[]"); } catch { /* empty */ }
 
     // 1. Implement
-    this.state.advanceWorkflow(runId, WorkflowStep.SUBTASK_IMPLEMENTING);
+    this.state.advanceWorkflow(runId, WorkflowStep.SUBTASK_IMPLEMENTING, {
+      currentSubtaskIndex: subtask.id,
+    });
     this.state.updateSubtask(subtask.id, { status: TaskStatus.IN_PROGRESS, assignedAgent: agentId });
 
     const total = this.state.getSubtasks(runId).length;

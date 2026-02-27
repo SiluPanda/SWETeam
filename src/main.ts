@@ -9,6 +9,7 @@ import { WorkflowRunner } from "./workflow.js";
 import { createInterface, type InterfaceAdapter } from "./interfaces/base.js";
 import { createCliBackend } from "./cli-backend.js";
 import { TaskStatus } from "./db/schema.js";
+import { formatStatus, formatList } from "./messaging.js";
 
 const execFileP = promisify(execFile);
 
@@ -57,6 +58,33 @@ export class SWETeam {
     const backend = createCliBackend(provider);
     if (!await backend.checkAvailable()) {
       console.warn(`Warning: ${provider} CLI not found`);
+    }
+  }
+
+  private handleCommand(command: string, chatId: string): void {
+    const cmd = command.trim();
+    if (cmd === "/list") {
+      const runs = this.state.getActiveRuns();
+      this.iface.sendMessage(chatId, formatList(runs));
+    } else if (cmd === "/status") {
+      const runs = this.state.getActiveRuns();
+      this.iface.sendMessage(chatId, formatStatus(runs));
+    } else if (cmd.startsWith("/stop")) {
+      const arg = cmd.replace("/stop", "").trim();
+      const runId = parseInt(arg, 10);
+      if (isNaN(runId)) {
+        this.iface.sendMessage(chatId, "Usage: /stop <run_id>");
+        return;
+      }
+      const runner = this.runners.get(runId);
+      if (runner) {
+        runner.cancel(runId);
+        this.state.cancelRun(runId);
+        this.iface.sendMessage(chatId, `Run #${runId} cancelled.`);
+      } else {
+        this.state.cancelRun(runId);
+        this.iface.sendMessage(chatId, `Run #${runId} marked as cancelled.`);
+      }
     }
   }
 
@@ -119,7 +147,10 @@ export class SWETeam {
     this.running = true;
 
     this.iface = await createInterface(this.config.interface, (repo, task, chatId) => {
-      if (repo === "__cmd__") return; // Handle command routing later
+      if (repo === "__cmd__") {
+        this.handleCommand(task, chatId);
+        return;
+      }
       this.handleMessage(repo, task, chatId);
     });
 

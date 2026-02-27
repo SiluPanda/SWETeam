@@ -112,7 +112,7 @@ export interface RepoSyncResult {
   cloned: boolean;
 }
 
-export function inferGithubRepoSpec(ref: string): string {
+export async function inferGithubRepoSpec(ref: string): Promise<string> {
   // Handle HTTPS URLs
   const httpsMatch = ref.match(/github\.com\/([^/]+\/[^/.]+)/);
   if (httpsMatch) return httpsMatch[1]!;
@@ -121,11 +121,16 @@ export function inferGithubRepoSpec(ref: string): string {
   if (sshMatch) return sshMatch[1]!;
   // Already owner/repo format
   if (ref.includes("/")) return ref;
+  // Bare name: infer owner via gh api user
+  try {
+    const owner = await ghExec(["api", "user", "-q", ".login"]);
+    if (owner) return `${owner}/${ref}`;
+  } catch { /* fall through */ }
   return ref;
 }
 
 export async function getOrCreateRepo(repoName: string, basePath: string): Promise<RepoSyncResult> {
-  const repoSpec = inferGithubRepoSpec(repoName);
+  const repoSpec = await inferGithubRepoSpec(repoName);
   const safeName = repoSpec.replace(/\//g, "-");
   const repoPath = path.join(basePath, safeName);
   const git = new GitOps(repoPath);
