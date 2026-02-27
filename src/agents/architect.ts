@@ -1,4 +1,5 @@
 import { BaseAgent } from "./base.js";
+import { getConfig } from "../config.js";
 import type { PlanTask } from "../state.js";
 
 export interface ClarificationResult {
@@ -10,6 +11,13 @@ export interface PlanResult {
   tasks: PlanTask[];
   parallelGroups: string[][];
   recommendedAgents: number;
+}
+
+export interface ReviewResult {
+  approved: boolean;
+  quality: string;
+  feedback: string;
+  issues: string[];
 }
 
 export function extractJson(text: string): unknown {
@@ -194,6 +202,38 @@ export class ArchitectAgent extends BaseAgent {
     } catch {
       return { status: "ready", message: "Proceeding with available information." };
     }
+  }
+
+  async reviewCode(
+    repoPath: string, taskDescription: string, diff: string, previousFeedback?: string[],
+  ): Promise<ReviewResult> {
+    const parts = [
+      `Review the following code changes for task: ${taskDescription}`,
+      `\nDiff:\n${diff.slice(0, 10000)}`,
+    ];
+    if (previousFeedback?.length) {
+      parts.push(`\nPrevious feedback:\n${previousFeedback.join("\n")}`);
+    }
+    parts.push('\nRespond with JSON: {"approved": true/false, "quality": "excellent"|"good"|"needs_work", "feedback": "...", "issues": ["..."]}');
+
+    try {
+      const output = await this.run(parts.join(""), repoPath);
+      const parsed = extractJson(output) as Partial<ReviewResult>;
+      return {
+        approved: !!parsed.approved,
+        quality: parsed.quality ?? "needs_work",
+        feedback: parsed.feedback ?? "",
+        issues: parsed.issues ?? [],
+      };
+    } catch {
+      return { approved: false, quality: "needs_work", feedback: "Review parse failed", issues: [] };
+    }
+  }
+
+  shouldApprove(review: ReviewResult): boolean {
+    const threshold = getConfig().agent.approvalThreshold;
+    if (threshold === "excellent") return review.approved && review.quality === "excellent";
+    return review.approved;
   }
 
   async planAndQueueTasks(repoPath: string, task: string): Promise<PlanResult> {

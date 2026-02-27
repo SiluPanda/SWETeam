@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { extractJson, validatePlan, computeParallelGroups } from "./architect.js";
+import { describe, it, expect, vi } from "vitest";
+import { extractJson, validatePlan, computeParallelGroups, ArchitectAgent } from "./architect.js";
 
 describe("extractJson", () => {
   it("parses plain JSON object", () => {
@@ -131,5 +131,48 @@ describe("computeParallelGroups", () => {
 
   it("handles empty tasks list", () => {
     expect(computeParallelGroups([])).toEqual([]);
+  });
+});
+
+describe("ArchitectAgent review", () => {
+  it("reviewCode returns ReviewResult on success", async () => {
+    const agent = new ArchitectAgent();
+    vi.spyOn(agent as any, "run").mockResolvedValueOnce(
+      '{"approved": true, "quality": "good", "feedback": "Looks great", "issues": []}'
+    );
+    const result = await agent.reviewCode("/fake", "task", "diff content");
+    expect(result.approved).toBe(true);
+    expect(result.quality).toBe("good");
+    expect(result.feedback).toBe("Looks great");
+  });
+
+  it("reviewCode returns fallback on parse failure", async () => {
+    const agent = new ArchitectAgent();
+    vi.spyOn(agent as any, "run").mockRejectedValueOnce(new Error("CLI error"));
+    const result = await agent.reviewCode("/fake", "task", "diff");
+    expect(result.approved).toBe(false);
+    expect(result.quality).toBe("needs_work");
+    expect(result.feedback).toBe("Review parse failed");
+  });
+
+  it("reviewCode includes previous feedback in prompt", async () => {
+    const agent = new ArchitectAgent();
+    const runSpy = vi.spyOn(agent as any, "run").mockResolvedValueOnce(
+      '{"approved": true, "quality": "excellent", "feedback": "", "issues": []}'
+    );
+    await agent.reviewCode("/fake", "task", "diff", ["Fix the types", "Add tests"]);
+    const prompt = runSpy.mock.calls[0]![0] as string;
+    expect(prompt).toContain("Fix the types");
+    expect(prompt).toContain("Add tests");
+  });
+
+  it("shouldApprove returns true when approved and threshold is good", () => {
+    const agent = new ArchitectAgent();
+    expect(agent.shouldApprove({ approved: true, quality: "good", feedback: "", issues: [] })).toBe(true);
+  });
+
+  it("shouldApprove returns false when not approved", () => {
+    const agent = new ArchitectAgent();
+    expect(agent.shouldApprove({ approved: false, quality: "needs_work", feedback: "fix", issues: ["a"] })).toBe(false);
   });
 });
