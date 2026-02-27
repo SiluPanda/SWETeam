@@ -1,0 +1,54 @@
+interface: "cli"
+
+telegram:
+  bot_token: ""
+  allowed_users: []
+
+agents:
+  architect:
+    provider: "claude"
+    model: "claude-opus-4-6"
+    extra_flags: "--dangerously-skip-permissions"
+    timeout: 900
+  swe:
+    provider: "claude"
+    model: "claude-sonnet-4-6"
+    extra_flags: "--dangerously-skip-permissions"
+    timeout: 900
+
+agent_pool:
+  max_agents: 4
+
+git:
+  default_branch: "main"
+  author_name: "SWE Team Bot"
+  author_email: "bot@swe-team.local"
+  github_token: ""
+
+repos:
+  base_path: "./repos"
+  workspaces_path: "./workspaces"
+  clone_timeout: 300
+
+database:
+  path: "./state/swe-team.db"
+
+processing:
+  max_concurrent_tasks: 4
+  workflow_timeout: 7200
+
+agent:
+  max_review_iterations: 3
+  max_clarification_rounds: 10
+  skip_clarification: false
+  approval_threshold: "good"
+  on_subtask_failure: "retry"
+  prompts:
+    architect: "src/prompts/architect-system.md"
+    architect_clarify: "src/prompts/architect-clarify.md"
+    architect_review: "src/prompts/architect-review.md"
+    swe: "src/prompts/swe-system.md"
+
+logging:
+  level: "info"
+  file: "./logs/swe-team.log"
