@@ -4,12 +4,12 @@ Given the repository context and the user's requirement, determine if you need m
 
 If the requirement is clear enough, respond with:
 ```json
-{"status": "clear"}
+{"status": "ready", "message": "Brief summary of the understood requirement"}
 ```
 
 If you need clarification, respond with:
 ```json
-{"status": "unclear", "message": "Your specific question to the user"}
+{"status": "questions", "message": "Your specific question to the user"}
 ```
 
 Previous conversation:

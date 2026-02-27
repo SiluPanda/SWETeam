@@ -7,10 +7,11 @@ export abstract class BaseAgent {
   protected cli: CLIBackend;
   protected agentType: string;
 
-  constructor(agentType: string) {
+  constructor(agentType: string, configOverride?: AgentLLMConfig) {
     this.agentType = agentType;
     const config = getConfig();
-    const llmConfig: AgentLLMConfig = (config.agents as Record<string, AgentLLMConfig>)[agentType]
+    const llmConfig: AgentLLMConfig = configOverride
+      ?? (config.agents as Record<string, AgentLLMConfig>)[agentType]
       ?? config.agents.swe;
     const flags = llmConfig.extraFlags ? llmConfig.extraFlags.split(/\s+/).filter(Boolean) : [];
     this.cli = createCliBackend(llmConfig.provider, llmConfig.model, flags, llmConfig.timeout * 1000);
@@ -20,6 +21,14 @@ export abstract class BaseAgent {
     const config = getConfig();
     const promptPath = config.agent.prompts[this.agentType]
       ?? config.agent.prompts["swe"];
+    if (!promptPath) return "";
+    const resolved = path.resolve(process.cwd(), promptPath);
+    try { return fs.readFileSync(resolved, "utf8"); } catch { return ""; }
+  }
+
+  protected loadPrompt(promptKey: string): string {
+    const config = getConfig();
+    const promptPath = config.agent.prompts[promptKey];
     if (!promptPath) return "";
     const resolved = path.resolve(process.cwd(), promptPath);
     try { return fs.readFileSync(resolved, "utf8"); } catch { return ""; }

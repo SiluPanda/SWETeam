@@ -144,8 +144,12 @@ export class WorkflowRunner {
 
   private async _doCreateBranch(runId: number) {
     const run = this.state.getWorkflowRun(runId)!;
-    const ws = Workspace.fromExisting("", run.workspacePath ?? "", run.workingBranch ?? "");
-    await ws.verifyBranch();
+    const originPath = run.repoId ? (this.state.getRepoById(run.repoId)?.path ?? "") : "";
+    const ws = Workspace.fromExisting(originPath, run.workspacePath ?? "", run.workingBranch ?? "");
+    const branchOk = await ws.verifyBranch();
+    if (!branchOk) {
+      throw new Error(`Branch mismatch in workspace ${run.workspacePath}: expected ${run.workingBranch}`);
+    }
     this.state.advanceWorkflow(runId, WorkflowStep.BRANCH_CREATED);
   }
 
@@ -237,15 +241,14 @@ export class WorkflowRunner {
     );
 
     this.pool = new AgentPoolManager(this.config.agentPool.maxAgents);
-    const repoPath = run.workspacePath ?? "";
-    const originPath = this.state.getOrCreateRepo(
-      this.state.getWorkflowRun(runId)!.repoId?.toString() ?? "",
-    ).path ?? repoPath;
+
+    // Look up the origin repo path by ID, not by passing repoId as name
+    const repo = run.repoId ? this.state.getRepoById(run.repoId) : null;
+    const originPath = repo?.path ?? run.workspacePath ?? "";
 
     await this.pool.spawn(
       agentCount,
-      // Use the repo path as origin for worktrees
-      repoPath.replace(/-swe-team.*$/, "") || repoPath,
+      originPath,
       this.config.repos.workspacesPath,
       String(runId),
       run.workingBranch ?? "",
@@ -280,11 +283,24 @@ export class WorkflowRunner {
       );
 
       // Handle failures per policy
-      for (const result of results) {
+      for (let ri = 0; ri < results.length; ri++) {
+        const result = results[ri]!;
         if (result.status === "rejected") {
           const policy = this.config.agent.onSubtaskFailure;
           if (policy === "stop") throw new Error(`Subtask failed: ${result.reason}`);
-          // "retry" and "continue" both move on
+          if (policy === "retry") {
+            // Retry once with error context
+            const taskId = group[ri]!;
+            const subtask = subtaskMap.get(taskId);
+            if (subtask && subtask.status !== TaskStatus.COMPLETED) {
+              try {
+                await this._executeSubtask(runId, subtask, repoName);
+              } catch {
+                // Retry failed, continue to next subtask
+              }
+            }
+          }
+          // "continue" just moves on
         }
       }
 

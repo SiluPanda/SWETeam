@@ -36,6 +36,10 @@ export class StateManager {
     return this.db.select().from(repos).where(eq(repos.name, name)).get()!;
   }
 
+  getRepoById(id: number) {
+    return this.db.select().from(repos).where(eq(repos.id, id)).get();
+  }
+
   createWorkflowRun(repoId: number, request: string, chatId: string) {
     const externalId = crypto.randomUUID().slice(0, 8);
     this.db.insert(workflowRuns).values({

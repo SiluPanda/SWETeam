@@ -5,6 +5,7 @@ services:
       - ./config.yaml:/app/config.yaml:ro
       - ./state:/app/state
       - ./repos:/app/repos
+      - ./workspaces:/app/workspaces
       - ./logs:/app/logs
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}

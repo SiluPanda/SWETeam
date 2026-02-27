@@ -13,15 +13,15 @@ You MUST respond with valid JSON:
 }
 ```
 
-Quality levels: "excellent", "good", "acceptable", "needs_work", "poor"
+Quality levels: "excellent", "good", "needs_work"
 
-If not approved, provide specific actionable feedback in the `issues` array:
+If not approved, provide specific actionable feedback in the `issues` array with severity and description:
 ```json
 {
   "approved": false,
   "quality": "needs_work",
   "feedback": "Summary of issues",
-  "issues": ["Issue 1 description", "Issue 2 description"]
+  "issues": [{"severity": "high", "description": "Issue 1"}, {"severity": "medium", "description": "Issue 2"}]
 }
 ```
 

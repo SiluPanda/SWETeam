@@ -1,5 +1,6 @@
 import { BaseAgent } from "./base.js";
 import { getConfig } from "../config.js";
+import type { AgentLLMConfig } from "../config.js";
 import type { PlanTask } from "../state.js";
 
 export interface ClarificationResult {
@@ -13,11 +14,16 @@ export interface PlanResult {
   recommendedAgents: number;
 }
 
+export interface ReviewIssue {
+  severity: string;
+  description: string;
+}
+
 export interface ReviewResult {
   approved: boolean;
-  quality: string;
+  quality: "excellent" | "good" | "needs_work";
   feedback: string;
-  issues: string[];
+  issues: ReviewIssue[];
 }
 
 export function extractJson(text: string): unknown {
@@ -147,8 +153,8 @@ function createDefaultPlan(task: string): PlanTask[] {
 }
 
 export class ArchitectAgent extends BaseAgent {
-  constructor() {
-    super("architect");
+  constructor(config?: AgentLLMConfig) {
+    super("architect", config);
   }
 
   async analyzeCodebase(repoPath: string): Promise<string> {
@@ -186,11 +192,21 @@ export class ArchitectAgent extends BaseAgent {
     conversationHistory: Array<{ role: "assistant" | "user"; text: string }>,
   ): Promise<ClarificationResult> {
     const historyStr = conversationHistory.map(m => `${m.role}: ${m.text}`).join("\n");
-    const prompt = [
-      `Requirement: ${taskDescription}`,
-      historyStr ? `\nPrevious conversation:\n${historyStr}` : "",
-      '\nIs the requirement clear enough to create a plan? Respond with JSON: {"status": "clear"} or {"status": "unclear", "message": "your question"}',
-    ].join("");
+
+    // Load the clarify template and substitute placeholders
+    let prompt: string;
+    const template = this.loadPrompt("architect_clarify");
+    if (template) {
+      prompt = template
+        .replace("{{conversation}}", historyStr || "(none)")
+        .replace("{{requirement}}", taskDescription);
+    } else {
+      prompt = [
+        `Requirement: ${taskDescription}`,
+        historyStr ? `\nPrevious conversation:\n${historyStr}` : "",
+        '\nIs the requirement clear enough to create a plan? Respond with JSON: {"status": "ready", "message": "summary"} or {"status": "questions", "message": "your question"}',
+      ].join("");
+    }
 
     try {
       const output = await this.run(prompt, repoPath);
@@ -207,23 +223,49 @@ export class ArchitectAgent extends BaseAgent {
   async reviewCode(
     repoPath: string, taskDescription: string, diff: string, previousFeedback?: string[],
   ): Promise<ReviewResult> {
-    const parts = [
-      `Review the following code changes for task: ${taskDescription}`,
-      `\nDiff:\n${diff.slice(0, 10000)}`,
-    ];
-    if (previousFeedback?.length) {
-      parts.push(`\nPrevious feedback:\n${previousFeedback.join("\n")}`);
+    const truncatedDiff = diff.length > 10000 ? diff.slice(0, 10000) + "\n... (truncated)" : diff;
+
+    // Load the review template and substitute placeholders
+    let prompt: string;
+    const template = this.loadPrompt("architect_review");
+    if (template) {
+      prompt = template
+        .replace("{{task}}", taskDescription)
+        .replace("{{diff}}", truncatedDiff);
+      if (previousFeedback?.length) {
+        prompt += `\n\nPrevious feedback:\n${previousFeedback.join("\n")}`;
+      }
+    } else {
+      const parts = [
+        `Review the following code changes for task: ${taskDescription}`,
+        `\nDiff:\n${truncatedDiff}`,
+      ];
+      if (previousFeedback?.length) {
+        parts.push(`\nPrevious feedback:\n${previousFeedback.join("\n")}`);
+      }
+      parts.push('\nRespond with JSON: {"approved": true/false, "quality": "excellent"|"good"|"needs_work", "feedback": "...", "issues": [{"severity": "...", "description": "..."}]}');
+      prompt = parts.join("");
     }
-    parts.push('\nRespond with JSON: {"approved": true/false, "quality": "excellent"|"good"|"needs_work", "feedback": "...", "issues": ["..."]}');
 
     try {
-      const output = await this.run(parts.join(""), repoPath);
-      const parsed = extractJson(output) as Partial<ReviewResult>;
+      const output = await this.run(prompt, repoPath);
+      const parsed = extractJson(output) as Record<string, unknown>;
+      // Normalize issues: accept both string[] and {severity, description}[]
+      let issues: ReviewIssue[] = [];
+      if (Array.isArray(parsed.issues)) {
+        issues = parsed.issues.map((i: unknown) => {
+          if (typeof i === "string") return { severity: "medium", description: i };
+          const obj = i as Record<string, unknown>;
+          return { severity: String(obj.severity ?? "medium"), description: String(obj.description ?? "") };
+        });
+      }
+      const quality = parsed.quality as string;
+      const validQualities = ["excellent", "good", "needs_work"];
       return {
         approved: !!parsed.approved,
-        quality: parsed.quality ?? "needs_work",
-        feedback: parsed.feedback ?? "",
-        issues: parsed.issues ?? [],
+        quality: (validQualities.includes(quality) ? quality : "needs_work") as ReviewResult["quality"],
+        feedback: String(parsed.feedback ?? ""),
+        issues,
       };
     } catch {
       return { approved: false, quality: "needs_work", feedback: "Review parse failed", issues: [] };

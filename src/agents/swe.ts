@@ -1,11 +1,12 @@
 import { BaseAgent } from "./base.js";
 import { extractJson } from "./architect.js";
+import type { AgentLLMConfig } from "../config.js";
 
 export class SWEAgent extends BaseAgent {
   lastError?: string;
 
-  constructor(public readonly agentId: string = "swe-0") {
-    super("swe");
+  constructor(public readonly agentId: string = "swe-0", config?: AgentLLMConfig) {
+    super("swe", config);
   }
 
   async implementTask(

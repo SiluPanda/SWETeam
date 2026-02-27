@@ -32,8 +32,19 @@ export class TelegramInterface extends InterfaceAdapter {
         return;
       }
 
-      if (text === "/start" || text === "/help") {
-        this.bot.sendMessage(chatId, "SWE Team Bot\nUsage: /task <repo> <description>");
+      if (text === "/start") {
+        this.bot.sendMessage(chatId, "Welcome to SWE Team Bot!\nSubmit tasks to have an AI agent swarm implement them.\nType /help for usage instructions.");
+        return;
+      }
+
+      if (text === "/help") {
+        this.bot.sendMessage(chatId, "SWE Team Bot - Commands:\n/task <owner/repo> <description> - Submit a task\n/list - Show active runs\n/status - Show run details\n/stop <run_id> - Cancel a run");
+        return;
+      }
+
+      const stopMatch = text.match(/^\/stop\s*([\s\S]*)/);
+      if (stopMatch) {
+        this.messageCallback("__cmd__", `/stop ${stopMatch[1]?.trim() ?? ""}`, chatId);
         return;
       }
 
