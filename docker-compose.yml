@@ -1,0 +1,14 @@
+services:
+  swe-team:
+    build: .
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./state:/app/state
+      - ./repos:/app/repos
+      - ./logs:/app/logs
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    restart: unless-stopped
+    stdin_open: true
+    tty: true

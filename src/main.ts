@@ -1,11 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { getConfig, type Config } from "./config.js";
 import { StateManager } from "./state.js";
 import { RepoLockManager } from "./repo-locks.js";
 import { WorkflowRunner } from "./workflow.js";
 import { createInterface, type InterfaceAdapter } from "./interfaces/base.js";
+import { createCliBackend } from "./cli-backend.js";
 import { TaskStatus } from "./db/schema.js";
+
+const execFileP = promisify(execFile);
 
 export class SWETeam {
   private config: Config;
@@ -30,6 +35,28 @@ export class SWETeam {
 
     // Init database
     this.state = StateManager.init(this.config.database.path);
+
+    // Validate external tools
+    await this.validateTools();
+  }
+
+  private async validateTools(): Promise<void> {
+    const check = async (cmd: string, args: string[]) => {
+      try {
+        await execFileP(cmd, args, { timeout: 10_000 });
+        return true;
+      } catch { return false; }
+    };
+
+    if (!await check("git", ["--version"])) console.warn("Warning: git not found");
+    if (!await check("gh", ["--version"])) console.warn("Warning: gh (GitHub CLI) not found");
+
+    // Check configured CLI backend
+    const provider = this.config.agents.architect.provider;
+    const backend = createCliBackend(provider);
+    if (!await backend.checkAvailable()) {
+      console.warn(`Warning: ${provider} CLI not found`);
+    }
   }
 
   async handleMessage(repoName: string, task: string, chatId: string): Promise<void> {
