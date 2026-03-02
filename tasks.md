@@ -40,20 +40,20 @@ All tasks are in logical execution order. Each task should be small and self-con
 - Initialize Drizzle ORM instance
 - Ensure `~/.sweteam/` directory is created if missing
 - Database path: `~/.sweteam/sweteam.db`
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 7: Set up Drizzle Kit config
 - Create `drizzle.config.ts` for migration generation
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 8: Create re-export schema for drizzle-kit
 - Create `db/schema.ts` that re-exports from `src/db/schema.ts`
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 9: Generate initial migration
 - Run `drizzle-kit generate` to produce the initial migration SQL
 - Implement auto-migration on app startup in `client.ts`
-- **Status:** OPEN
+- **Status:** DONE
 
 ---
 
@@ -64,19 +64,19 @@ All tasks are in logical execution order. Each task should be small and self-con
 - Load config from `~/.sweteam/config.toml`
 - Define TypeScript types for config shape (roles, execution, git, agents sections)
 - Return defaults if config file doesn't exist
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 11: Implement CLI auto-discovery
 - Create `src/config/discovery.ts`
 - Check for `claude`, `codex`, `opencode`, `gh`, `git` binaries via `which`
 - Return availability + version info for each
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 12: Implement `init` command
 - Create `src/commands/init.ts`
 - Run auto-discovery, print results with checkmarks/crosses
 - Generate `~/.sweteam/config.toml` with discovered agents
-- **Status:** OPEN
+- **Status:** DONE
 
 ---
 
@@ -85,32 +85,32 @@ All tasks are in logical execution order. Each task should be small and self-con
 ### Task 13: Implement core git CLI wrapper functions
 - Create `src/git/git.ts`
 - Implement `git()` and `gh()` helper functions using `execSync`
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 14: Implement repo resolution function
 - Add `resolveRepo()` to `src/git/git.ts`
 - Handle three input forms: short name, `owner/repo`, full GitHub URL
 - Use `gh api user -q .login` for short name resolution
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 15: Implement branch operation functions
 - Add `createBranch()`, `squashMerge()` to `src/git/git.ts`
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 16: Implement diff and commit functions
 - Add `getDiff()`, `getStagedDiff()`, `commitAll()` to `src/git/git.ts`
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 17: Implement PR and push functions
 - Add `createPR()`, `pushBranch()` to `src/git/git.ts`
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 18: Implement repo clone/locate function
 - Add `cloneOrLocateRepo()` to `src/git/git.ts`
 - Check if `~/.sweteam/repos/{owner}--{name}` exists
 - If yes: `git fetch origin`, checkout main, pull
 - If no: `gh repo clone` to that path
-- **Status:** OPEN
+- **Status:** DONE
 
 ---
 
@@ -119,35 +119,35 @@ All tasks are in logical execution order. Each task should be small and self-con
 ### Task 19: Define AgentAdapter interface
 - Create `src/adapters/adapter.ts`
 - Define `AgentAdapter` interface and `AgentResult` type as per spec section 8
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 20: Implement Claude Code adapter
 - Create `src/adapters/claude-code.ts`
 - Implement `isAvailable()` using `which claude`
 - Implement `execute()` using `spawn("claude", ["-p", "--output-format", "json"])`
 - Handle stdin prompt piping, stdout collection, timeout, exit code
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 21: Implement Codex adapter
 - Create `src/adapters/codex.ts`
 - Same pattern as Claude Code but using `codex` with `-q` flag
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 22: Implement OpenCode adapter
 - Create `src/adapters/opencode.ts`
 - Same pattern but using `opencode` with `--non-interactive` flag
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 23: Implement custom adapter (config-driven)
 - Create `src/adapters/custom.ts`
 - Read command, args, prompt_via, output_from from config
 - Support stdin/arg/file prompt delivery and stdout/file output capture
-- **Status:** OPEN
+- **Status:** DONE
 
 ### Task 24: Create adapter registry/factory
 - Add function to resolve adapter by name from config
 - Returns the correct adapter instance based on config `[agents.*]` section
-- **Status:** OPEN
+- **Status:** DONE
 
 ---
 
@@ -159,7 +159,7 @@ All tasks are in logical execution order. Each task should be small and self-con
 - Define valid transitions as per spec section 10
 - Implement `validateTransition(from, to)` function
 - Implement `transition(sessionId, newStatus)` that validates + updates DB
-- **Status:** OPEN
+- **Status:** DONE
 
 ---
 
