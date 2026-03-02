@@ -1,0 +1,21 @@
+{
+  "name": "sweteam",
+  "version": "0.1.0",
+  "description": "Autonomous coding agent orchestrator — turns high-level goals into PR'd code",
+  "type": "module",
+  "bin": {
+    "sweteam": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "keywords": [
+    "cli",
+    "coding-agent",
+    "orchestrator",
+    "ai"
+  ],
+  "license": "MIT"
+}
