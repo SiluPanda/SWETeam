@@ -1,4 +1,5 @@
 import { getSession, getMessages } from "../session/manager.js";
+import { startInteractiveSession } from "../session/interactive.js";
 import { tasks } from "../db/schema.js";
 import { getDb } from "../db/client.js";
 import { eq } from "drizzle-orm";
@@ -100,5 +101,11 @@ export async function handleEnter(sessionId: string): Promise<void> {
 
   console.log(formatSummary(summary));
 
-  // Interactive session loop will be wired in Task 36 (chat.ts)
+  const session = getSession(sessionId)!;
+  await startInteractiveSession(
+    sessionId,
+    session.repo,
+    session.goal,
+    session.repoLocalPath ?? ".",
+  );
 }
