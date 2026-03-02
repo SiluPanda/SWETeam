@@ -2,10 +2,11 @@ import { eq } from "drizzle-orm";
 import { getDb } from "../db/client.js";
 import { sessions } from "../db/schema.js";
 import { getHelpText } from "./chat.js";
-import { stopSession, addMessage } from "./manager.js";
+import { stopSession, addMessage, getSession } from "./manager.js";
 import { invokePlanner } from "../planner/planner.js";
 import { handleBuild } from "../orchestrator/build-handler.js";
 import { handleFeedback } from "../orchestrator/feedback-handler.js";
+import { transition } from "./state-machine.js";
 import { AgentPanel } from "../ui/agent-panel.js";
 import {
   getStatusDisplay,
@@ -67,6 +68,13 @@ export function createSessionHandlers(
           .run();
       }
 
+      // If session is stuck in building (e.g. after a failed/timed-out build),
+      // transition back to planning so the user can iterate with the planner.
+      const session = getSession(sessionId);
+      if (session?.status === "building") {
+        transition(sessionId, "planning");
+      }
+
       addMessage(sessionId, "user", text, { phase: "planning" });
 
       const panel = new AgentPanel();
@@ -85,10 +93,7 @@ export function createSessionHandlers(
         panel.completeAgent("planner", true);
         panel.destroy();
 
-        // Print the final response as a clean message
-        if (response.trim()) {
-          console.log("\n" + response.trim() + "\n");
-        } else {
+        if (!response.trim()) {
           console.log("\n(planner returned empty response)\n");
         }
 

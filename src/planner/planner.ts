@@ -158,7 +158,7 @@ export async function invokePlanner(
   const result = await adapter.execute({
     prompt,
     cwd: repoPath,
-    timeout: 120000,
+    timeout: 0,
     onOutput,
   });
 

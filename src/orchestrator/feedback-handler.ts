@@ -265,7 +265,7 @@ export async function handleFeedback(
   const result = await adapter.execute({
     prompt,
     cwd: session.repoLocalPath ?? ".",
-    timeout: 120000,
+    timeout: 0,
     onOutput: (chunk: string) => panel.appendOutput("planner-1", chunk),
   });
   panel.completeAgent("planner-1", true);

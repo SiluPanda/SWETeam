@@ -19,7 +19,7 @@ export class ClaudeCodeAdapter implements AgentAdapter {
     timeout?: number;
     onOutput?: (chunk: string) => void;
   }): Promise<AgentResult> {
-    const timeout = opts.timeout ?? 300000; // 5 min default
+    const timeout = opts.timeout ?? 0;
     const startTime = Date.now();
 
     return new Promise((resolve, reject) => {
@@ -48,13 +48,13 @@ export class ClaudeCodeAdapter implements AgentAdapter {
         }
       });
 
-      const timer = setTimeout(() => {
+      const timer = timeout > 0 ? setTimeout(() => {
         proc.kill("SIGTERM");
         reject(new Error(`Claude Code timed out after ${timeout}ms`));
-      }, timeout);
+      }, timeout) : null;
 
       proc.on("close", (code) => {
-        clearTimeout(timer);
+        if (timer) clearTimeout(timer);
         resolve({
           output: stdout || stderr,
           exitCode: code ?? 1,
@@ -63,7 +63,7 @@ export class ClaudeCodeAdapter implements AgentAdapter {
       });
 
       proc.on("error", (err) => {
-        clearTimeout(timer);
+        if (timer) clearTimeout(timer);
         reject(err);
       });
 
