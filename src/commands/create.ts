@@ -1,4 +1,5 @@
 import { createSession } from "../session/manager.js";
+import { startInteractiveSession } from "../session/interactive.js";
 
 export async function handleCreate(
   repoInput: string,
@@ -14,9 +15,13 @@ export async function handleCreate(
     console.log(`  Repo:   ${session.repo}`);
     console.log(`  Branch: ${session.workingBranch}`);
     console.log(`  Status: planning`);
-    console.log(`\nEntering planning chat...`);
 
-    // Planning chat will be wired in Task 36
+    await startInteractiveSession(
+      session.id,
+      session.repo,
+      goal,
+      session.repoLocalPath,
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`Failed to create session: ${message}`);
