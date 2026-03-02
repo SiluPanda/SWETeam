@@ -33,34 +33,57 @@
 
 ## Why sweteam?
 
-AI coding agents are powerful, but using them on real tasks exposes a recurring set of problems: vague prompts produce vague code, large changes land as a single untested blob, mistakes aren't caught until you read the diff, and if anything crashes mid-run your progress is gone.
+Real software isn't built by a single person typing in a terminal. It's built by **teams** — a tech lead breaks down the work, engineers pick up tasks, reviewers catch mistakes, and the whole thing ships through a structured process. That's what makes production code robust.
 
-sweteam fixes this by adding the missing orchestration layer:
+sweteam brings that same discipline to AI coding agents:
+
+```
+              How a real engineering team works
+              ─────────────────────────────────
+
+ ┌───────────┐    You describe what you want. The planner
+ │  You      │    asks questions, proposes an architecture,
+ │  (PM)     │    and breaks it into scoped tasks — just like
+ └─────┬─────┘    a tech lead running a planning session.
+       │
+       ▼
+ ┌────────────┐   The planner decomposes your goal into small
+ │  Planner   │   tasks with acceptance criteria, dependency
+ │ (Tech Lead)│   order, and file-level scope. You review
+ └─────┬──────┘   and refine before anything gets built.
+       │
+       │  @build
+       ▼
+ ┌───────────┐    Each task is assigned to a coding agent on
+ │  Coders   │    its own branch. Independent tasks run in
+ │(Engineers)│    parallel — like engineers on a team working
+ └─────┬─────┘    on separate features simultaneously.
+       │
+       ▼
+ ┌───────────┐    A separate agent reviews each task's diff
+ │ Reviewer  │    against its acceptance criteria. Failures
+ │  (Senior) │    get sent back for fixes automatically —
+ └─────┬─────┘    the same code review loop your team runs.
+       │
+       ▼
+ ┌───────────┐    Approved tasks are merged, the branch is
+ │  Git + PR │    pushed, and a PR is opened. The session
+ │  (CI/CD)  │    stays open — give feedback, agents iterate
+ └─────┬─────┘    on the same PR until you're satisfied.
+       │
+       ▼
+      Done
+```
+
+The key ideas:
 
 - **Granular task breakdown** — your goal is decomposed into small, scoped tasks with explicit acceptance criteria, so each agent call has a clear contract
 - **DAG execution** — tasks are organized into a dependency graph and dispatched in the correct order, with independent tasks running in parallel
-- **Multi-model review loop** — every task is reviewed by a separate agent against its acceptance criteria; failures are retried automatically up to a configurable limit
+- **Multi-model review loop** — every task is reviewed by a separate agent against its acceptance criteria; failures are retried automatically, just like a real code review cycle
 - **Session persistence** — sessions, plans, tasks, diffs, and full conversation history are stored in SQLite; crash, close the terminal, come back tomorrow — nothing is lost
 - **Agent-agnostic** — works with Claude Code, Codex CLI, OpenCode, or any custom CLI that reads stdin and writes stdout
 
-The result: you describe what you want, refine the plan in conversation, type `@build`, and get a PR with reviewed, tested code — not a best-effort dump.
-
-```
-You: "Add dark theme with system preference detection"
-         |
-         v
-  Planning Chat  <-- refine the plan with an AI architect
-         |
-         |  @build
-         v
-  Decompose --> Code --> Review --> Fix --> PR
-         |
-         v
-  Session stays open -- give feedback, agents iterate
-         |
-         v
-  You're satisfied --> done
-```
+sweteam doesn't replace your coding agents. It gives them the same structure that makes real engineering teams ship reliable code.
 
 ## Terminal UI
 
