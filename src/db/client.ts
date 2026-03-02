@@ -1,6 +1,7 @@
-import { mkdirSync } from "fs";
-import { join } from "path";
+import { mkdirSync, readFileSync, readdirSync } from "fs";
+import { join, dirname } from "path";
 import { homedir } from "os";
+import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema.js";
@@ -12,11 +13,65 @@ function ensureDir(dir: string): void {
   mkdirSync(dir, { recursive: true });
 }
 
+function getMigrationsDir(): string {
+  const thisFile = fileURLToPath(import.meta.url);
+  return join(dirname(thisFile), "../../drizzle/migrations");
+}
+
+function runMigrations(sqlite: Database.Database): void {
+  const migrationsDir = getMigrationsDir();
+
+  let sqlFiles: string[];
+  try {
+    sqlFiles = readdirSync(migrationsDir)
+      .filter((f) => f.endsWith(".sql"))
+      .sort();
+  } catch {
+    return;
+  }
+
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS __drizzle_migrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      hash TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )
+  `);
+
+  const applied = new Set(
+    sqlite
+      .prepare("SELECT hash FROM __drizzle_migrations")
+      .all()
+      .map((r) => (r as { hash: string }).hash),
+  );
+
+  for (const file of sqlFiles) {
+    if (applied.has(file)) continue;
+    const sql = readFileSync(join(migrationsDir, file), "utf-8");
+    const statements = sql
+      .split("--> statement-breakpoint")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const runAll = sqlite.transaction(() => {
+      for (const stmt of statements) {
+        sqlite.exec(stmt);
+      }
+      sqlite
+        .prepare(
+          "INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)",
+        )
+        .run(file, Date.now());
+    });
+    runAll();
+  }
+}
+
 function createConnection(dbPath: string = DB_PATH): Database.Database {
-  ensureDir(SWETEAM_DIR);
+  ensureDir(dirname(dbPath));
   const sqlite = new Database(dbPath);
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
+  runMigrations(sqlite);
   return sqlite;
 }
 
