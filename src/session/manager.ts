@@ -1,8 +1,10 @@
 import { nanoid } from "nanoid";
 import { eq, sql } from "drizzle-orm";
-import { getDb } from "../db/client.js";
+import { join } from "path";
+import { unlinkSync } from "fs";
+import { getDb, SWETEAM_DIR } from "../db/client.js";
 import { sessions, messages, tasks as tasksTable } from "../db/schema.js";
-import { resolveRepo, cloneOrLocateRepo, createBranch } from "../git/git.js";
+import { resolveRepo, cloneOrLocateRepo, createBranch, deleteBranches, getDefaultBranch, git } from "../git/git.js";
 import { loadConfig } from "../config/loader.js";
 
 function generateSessionId(): string {
@@ -197,6 +199,30 @@ export function deleteSession(id: string): void {
   const session = getSession(id);
   if (!session) {
     throw new Error(`Session not found: ${id}`);
+  }
+
+  // Clean up git branches associated with this session
+  if (session.repoLocalPath) {
+    try {
+      // Switch to default branch first so session branch isn't checked out
+      const defaultBranch = getDefaultBranch(session.repoLocalPath);
+      git(["checkout", defaultBranch], session.repoLocalPath);
+    } catch {
+      // May already be on default branch or repo may be gone
+    }
+    try {
+      deleteBranches(`sw/${id}*`, session.repoLocalPath);
+    } catch {
+      // Git cleanup is best-effort — don't fail the delete
+    }
+  }
+
+  // Clean up agent log files
+  try {
+    const logPath = join(SWETEAM_DIR, "logs", `${id}.jsonl`);
+    unlinkSync(logPath);
+  } catch {
+    // Log file may not exist
   }
 
   db.delete(sessions).where(eq(sessions.id, id)).run();
