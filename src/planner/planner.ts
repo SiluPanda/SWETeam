@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { readdirSync, readFileSync, statSync, existsSync } from "fs";
 import { join, relative } from "path";
 import { resolveAdapter } from "../adapters/adapter.js";
@@ -87,7 +87,7 @@ export function getManifestContents(repoPath: string): string | null {
 
 export function getRecentCommits(repoPath: string, count: number = 20): string {
   try {
-    return execSync(`git log --oneline -${count}`, {
+    return execFileSync("git", ["log", "--oneline", `-${count}`], {
       cwd: repoPath,
       encoding: "utf-8",
       timeout: 5000,
@@ -132,9 +132,22 @@ ${goal}
 ${historyText}
 
 When the user seems happy with the direction, propose a task breakdown.
-Each task needs: id, title, description, files_likely_touched, depends_on,
-acceptance_criteria. Tell the user to type @build when ready.
+Output the tasks as a JSON code block with this exact schema:
 
+\`\`\`json
+[
+  {
+    "id": "1",
+    "title": "Short task title",
+    "description": "What to do",
+    "files_likely_touched": ["path/to/file.py"],
+    "depends_on": [],
+    "acceptance_criteria": ["criterion 1"]
+  }
+]
+\`\`\`
+
+Tell the user to type @build when ready.
 Do NOT generate code. Only plan.`;
 }
 

@@ -36,9 +36,21 @@ function tryParseJson(text: string): ParsedTask[] | null {
   }
 }
 
+/** Strip inline markdown formatting (bold, italic, code spans) from a string. */
+function stripInlineMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "$1")   // **bold**
+    .replace(/__(.+?)__/g, "$1")         // __bold__
+    .replace(/\*(.+?)\*/g, "$1")         // *italic*
+    .replace(/_(.+?)_/g, "$1")           // _italic_
+    .replace(/`([^`]+)`/g, "$1")         // `code`
+    .trim();
+}
+
 function normalizeTask(raw: Record<string, unknown>, index: number): ParsedTask {
+  const rawId = String(raw.id ?? `task-${String(index + 1).padStart(3, "0")}`);
   return {
-    id: String(raw.id ?? `task-${String(index + 1).padStart(3, "0")}`),
+    id: stripInlineMarkdown(rawId),
     title: String(raw.title ?? "Untitled task"),
     description: String(raw.description ?? ""),
     filesLikelyTouched: toStringArray(raw.files_likely_touched ?? raw.filesLikelyTouched ?? raw.files ?? []),
@@ -163,7 +175,7 @@ function parseTable(text: string): ParsedTask[] {
     }
 
     tasks.push({
-      id: row.id || `task-${String(tasks.length + 1).padStart(3, "0")}`,
+      id: stripInlineMarkdown(row.id || `task-${String(tasks.length + 1).padStart(3, "0")}`),
       title: row.title || "Untitled task",
       description: row.description || "",
       filesLikelyTouched: (row.files_likely_touched || row.files || "")
@@ -176,6 +188,14 @@ function parseTable(text: string): ParsedTask[] {
   }
 
   return tasks;
+}
+
+/** Normalize box-drawing characters (│┌┬┐├┼┤└┴┘─) to ASCII equivalents for parsing. */
+function normalizeBoxDrawing(text: string): string {
+  return text
+    .replace(/│/g, "|")
+    .replace(/[┌┬┐├┼┤└┴┘─]/g, "-")
+    .replace(/[…]/g, "...");
 }
 
 export function parsePlan(agentOutput: string): ParsedPlan {
@@ -195,6 +215,13 @@ export function parsePlan(agentOutput: string): ParsedPlan {
   const tableTasks = parseTable(agentOutput);
   if (tableTasks.length > 0) {
     return { tasks: tableTasks, raw: agentOutput };
+  }
+
+  // Retry with box-drawing characters normalized to ASCII
+  const normalized = normalizeBoxDrawing(agentOutput);
+  const normalizedTable = parseTable(normalized);
+  if (normalizedTable.length > 0) {
+    return { tasks: normalizedTable, raw: agentOutput };
   }
 
   return { tasks: [], raw: agentOutput };
