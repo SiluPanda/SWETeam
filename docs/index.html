@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>sweteam — Autonomous Coding Agent Orchestrator</title>
+  <meta name="description" content="sweteam orchestrates your coding agents so you don't have to. Turn high-level goals into PR'd code." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── Reset & Base ─────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; font-size: 16px; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0a0e1a;
+      color: #c8d6e5;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+    a { color: #60a5fa; text-decoration: none; transition: color 0.2s; }
+    a:hover { color: #93c5fd; }
+    code, pre { font-family: 'JetBrains Mono', monospace; }
+    code {
+      background: #1e293b;
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      font-size: 0.88em;
+      color: #93c5fd;
+    }
+    pre {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 1.2em 1.5em;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: #e2e8f0;
+    }
+    pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+
+    /* ─── Layout ───────────────────────────────────────── */
+    .container { max-width: 960px; margin: 0 auto; padding: 0 1.5rem; }
+
+    /* ─── Nav ──────────────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(10, 14, 26, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #1e293b;
+      padding: 0.7rem 0;
+    }
+    nav .container {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    nav .logo {
+      font-weight: 700; font-size: 1.1rem; color: #f1f5f9;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    nav .logo .dot { color: #3b82f6; }
+    nav .nav-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    nav .nav-links a { color: #94a3b8; font-size: 0.9rem; font-weight: 500; }
+    nav .nav-links a:hover { color: #f1f5f9; }
+    .github-link {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: #1e293b; padding: 0.4rem 0.9rem; border-radius: 6px;
+      font-size: 0.85rem; font-weight: 500; color: #e2e8f0 !important;
+      transition: background 0.2s;
+    }
+    .github-link:hover { background: #334155; }
+
+    /* ─── Hero ─────────────────────────────────────────── */
+    .hero {
+      padding: 8rem 0 4rem;
+      text-align: center;
+      position: relative;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* ─── Mascot SVG ───────────────────────────────────── */
+    .mascot-container {
+      display: flex; justify-content: center; margin-bottom: 2rem;
+      position: relative;
+    }
+    .mascot-svg { width: 220px; height: 180px; }
+
+    /* Mascot Animations */
+    @keyframes pupilLookAround {
+      0%, 100% { transform: translate(0, 0); }
+      10% { transform: translate(6px, -3px); }
+      20% { transform: translate(8px, 0); }
+      30% { transform: translate(6px, 4px); }
+      40% { transform: translate(0, 6px); }
+      50% { transform: translate(-6px, 4px); }
+      60% { transform: translate(-8px, 0); }
+      70% { transform: translate(-6px, -4px); }
+      80% { transform: translate(-2px, -6px); }
+      90% { transform: translate(3px, -5px); }
+    }
+    @keyframes blink {
+      0%, 42%, 44%, 92%, 94%, 100% { transform: scaleY(1); }
+      43%, 93% { transform: scaleY(0.05); }
+    }
+    @keyframes screenGlow {
+      0%, 100% { filter: drop-shadow(0 0 12px rgba(59,130,246,0.3)); }
+      50% { filter: drop-shadow(0 0 25px rgba(59,130,246,0.5)); }
+    }
+    @keyframes floatBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    @keyframes mouthWiggle {
+      0%, 100% { d: path("M 72 128 Q 90 142 108 128 Q 100 146 90 148 Q 80 146 72 128"); }
+      25% { d: path("M 74 128 Q 90 145 106 128 Q 100 148 90 150 Q 80 148 74 128"); }
+      50% { d: path("M 70 128 Q 90 140 110 128 Q 100 144 90 146 Q 80 144 70 128"); }
+      75% { d: path("M 73 128 Q 90 144 107 128 Q 100 147 90 149 Q 80 147 73 128"); }
+    }
+    @keyframes sparkle1 {
+      0%, 100% { opacity: 0; transform: scale(0); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes sparkle2 {
+      0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+      50% { opacity: 1; transform: scale(1) rotate(45deg); }
+    }
+    @keyframes sparkle3 {
+      0%, 100% { opacity: 0; transform: scale(0); }
+      40% { opacity: 0; transform: scale(0); }
+      70% { opacity: 1; transform: scale(1.2); }
+      90% { opacity: 0; transform: scale(0); }
+    }
+    @keyframes rainbowShift {
+      0% { stop-color: #3b82f6; }
+      25% { stop-color: #8b5cf6; }
+      50% { stop-color: #ec4899; }
+      75% { stop-color: #f59e0b; }
+      100% { stop-color: #3b82f6; }
+    }
+    @keyframes pupilColorShift {
+      0%, 100% { fill: #1e293b; }
+      33% { fill: #1e1b4b; }
+      66% { fill: #1e293b; }
+    }
+    @keyframes eyeShine {
+      0%, 100% { opacity: 0.8; r: 3; }
+      50% { opacity: 1; r: 4; }
+    }
+
+    .mascot-group { animation: floatBounce 3s ease-in-out infinite; }
+    .mascot-screen { animation: screenGlow 3s ease-in-out infinite; }
+    .mascot-pupil { animation: pupilLookAround 4s ease-in-out infinite, pupilColorShift 6s ease infinite; }
+    .mascot-eye-group { transform-origin: center; animation: blink 4s ease-in-out infinite; }
+    .mascot-left-eye .mascot-eye-group { animation-delay: 0s; }
+    .mascot-right-eye .mascot-eye-group { animation-delay: 0.1s; }
+    .mascot-mouth { animation: mouthWiggle 3s ease-in-out infinite; }
+    .mascot-eye-shine { animation: eyeShine 2s ease-in-out infinite; }
+
+    .sparkle-1 { animation: sparkle1 3s ease-in-out infinite; animation-delay: 0s; }
+    .sparkle-2 { animation: sparkle2 4s ease-in-out infinite; animation-delay: 1.5s; }
+    .sparkle-3 { animation: sparkle3 3.5s ease-in-out infinite; animation-delay: 0.8s; }
+    .sparkle-4 { animation: sparkle1 2.5s ease-in-out infinite; animation-delay: 2s; }
+
+    .hero h1 {
+      font-size: 3.5rem; font-weight: 800; color: #f1f5f9;
+      margin-bottom: 0.5rem; letter-spacing: -0.03em;
+    }
+    .hero .tagline {
+      font-size: 1.25rem; color: #94a3b8; max-width: 600px;
+      margin: 0 auto 0.5rem; font-weight: 400;
+    }
+    .hero .subtitle {
+      font-size: 1rem; color: #64748b; font-style: italic;
+      margin-bottom: 2rem;
+    }
+    .hero-actions {
+      display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+    .btn {
+      padding: 0.7rem 1.8rem; border-radius: 8px; font-weight: 600;
+      font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #3b82f6; color: #fff;
+    }
+    .btn-primary:hover { background: #2563eb; color: #fff; }
+    .btn-secondary {
+      background: #1e293b; color: #e2e8f0; border: 1px solid #334155;
+    }
+    .btn-secondary:hover { background: #334155; color: #fff; }
+
+    .install-box {
+      display: inline-flex; align-items: center; gap: 0.8rem;
+      background: #0f172a; border: 1px solid #1e293b; border-radius: 8px;
+      padding: 0.6rem 1.2rem; font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem; color: #94a3b8;
+    }
+    .install-box .prompt { color: #3b82f6; }
+    .install-box .cmd { color: #e2e8f0; }
+
+    /* ─── Sections ─────────────────────────────────────── */
+    section { padding: 4rem 0; }
+    section + section { border-top: 1px solid #1e293b; }
+    .section-title {
+      font-size: 2rem; font-weight: 700; color: #f1f5f9;
+      margin-bottom: 1rem; letter-spacing: -0.02em;
+    }
+    .section-subtitle {
+      font-size: 1.1rem; color: #94a3b8; margin-bottom: 2rem;
+      max-width: 700px;
+    }
+
+    /* ─── Feature Grid ─────────────────────────────────── */
+    .feature-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem; margin-top: 2rem;
+    }
+    .feature-card {
+      background: #0f172a; border: 1px solid #1e293b; border-radius: 10px;
+      padding: 1.5rem; transition: border-color 0.2s, transform 0.2s;
+    }
+    .feature-card:hover { border-color: #3b82f6; transform: translateY(-2px); }
+    .feature-card h3 {
+      color: #f1f5f9; font-size: 1.05rem; margin-bottom: 0.5rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .feature-card p { color: #94a3b8; font-size: 0.9rem; line-height: 1.6; }
+
+    /* ─── Workflow Diagram ─────────────────────────────── */
+    .workflow {
+      display: grid; grid-template-columns: 1fr; gap: 0;
+      margin-top: 2rem; position: relative;
+    }
+    .workflow-step {
+      display: flex; gap: 1.5rem; align-items: flex-start;
+      padding: 1.5rem 0; position: relative;
+    }
+    .workflow-step::before {
+      content: '';
+      position: absolute; left: 22px; top: 3.5rem; bottom: 0;
+      width: 2px; background: #1e293b;
+    }
+    .workflow-step:last-child::before { display: none; }
+    .step-num {
+      min-width: 44px; height: 44px; border-radius: 50%;
+      background: #1e293b; border: 2px solid #3b82f6;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; color: #3b82f6; font-size: 0.9rem;
+      position: relative; z-index: 1;
+    }
+    .step-content h3 { color: #f1f5f9; margin-bottom: 0.3rem; }
+    .step-content p { color: #94a3b8; font-size: 0.92rem; }
+
+    /* ─── Tables ───────────────────────────────────────── */
+    table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    th, td {
+      text-align: left; padding: 0.7rem 1rem;
+      border-bottom: 1px solid #1e293b;
+    }
+    th { color: #94a3b8; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    td { color: #c8d6e5; }
+    td code { font-size: 0.85rem; }
+    tr:hover td { background: rgba(59,130,246,0.04); }
+
+    /* ─── Architecture ─────────────────────────────────── */
+    .arch-box {
+      background: #0f172a; border: 1px solid #1e293b; border-radius: 10px;
+      padding: 2rem; margin-top: 1.5rem;
+    }
+    .arch-box pre { border: none; background: transparent; padding: 0; margin: 0; }
+
+    /* ─── Config Section ───────────────────────────────── */
+    .config-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    @media (max-width: 700px) { .config-grid { grid-template-columns: 1fr; } }
+
+    /* ─── Footer ───────────────────────────────────────── */
+    footer {
+      border-top: 1px solid #1e293b; padding: 2rem 0;
+      text-align: center; color: #64748b; font-size: 0.85rem;
+    }
+    footer a { color: #64748b; }
+    footer a:hover { color: #94a3b8; }
+
+    /* ─── Responsive ───────────────────────────────────── */
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 2.4rem; }
+      .hero .tagline { font-size: 1.05rem; }
+      nav .nav-links { display: none; }
+      .feature-grid { grid-template-columns: 1fr; }
+      .mascot-svg { width: 180px; height: 150px; }
+    }
+
+    /* ─── Scroll fade-in ───────────────────────────────── */
+    .fade-in {
+      opacity: 0; transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* ─── Badge Row ────────────────────────────────────── */
+    .badges { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .badge {
+      display: inline-block; padding: 0.25rem 0.7rem; border-radius: 999px;
+      font-size: 0.75rem; font-weight: 600; border: 1px solid #334155;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── Navigation ──────────────────────────────────────── -->
+<nav>
+  <div class="container">
+    <div class="logo"><span class="dot">&#9679;</span> sweteam</div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#quickstart">Quick Start</a>
+      <a href="#commands">Commands</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#configuration">Configuration</a>
+    </div>
+    <a href="https://github.com/SiluPanda/sweteam" class="github-link" target="_blank" rel="noopener">
+      <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<!-- ─── Hero ────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="container">
+    <div class="mascot-container">
+      <svg class="mascot-svg" viewBox="0 0 180 160" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="screenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#1e3a5f">
+              <animate attributeName="stop-color" values="#1e3a5f;#2d1b69;#1b4332;#1e3a5f" dur="8s" repeatCount="indefinite" />
+            </stop>
+            <stop offset="100%" style="stop-color:#0f172a">
+              <animate attributeName="stop-color" values="#0f172a;#1a0f2e;#0f1a14;#0f172a" dur="8s" repeatCount="indefinite" />
+            </stop>
+          </linearGradient>
+          <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#3b82f6">
+              <animate attributeName="stop-color" values="#3b82f6;#8b5cf6;#ec4899;#f59e0b;#10b981;#3b82f6" dur="6s" repeatCount="indefinite" />
+            </stop>
+            <stop offset="100%" style="stop-color:#60a5fa">
+              <animate attributeName="stop-color" values="#60a5fa;#a78bfa;#f472b6;#fbbf24;#34d399;#60a5fa" dur="6s" repeatCount="indefinite" />
+            </stop>
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="softGlow">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <g class="mascot-group">
+          <!-- Monitor stand -->
+          <rect x="78" y="132" width="24" height="10" rx="2" fill="#334155" />
+          <rect x="62" y="140" width="56" height="6" rx="3" fill="#334155" />
+
+          <!-- Screen body (outer border with rainbow gradient) -->
+          <g class="mascot-screen">
+            <rect x="18" y="12" width="144" height="118" rx="12" fill="url(#borderGrad)" />
+            <!-- Screen inner -->
+            <rect x="22" y="16" width="136" height="110" rx="10" fill="url(#screenGrad)" />
+            <!-- Screen gloss highlight -->
+            <rect x="26" y="20" width="128" height="50" rx="8" fill="rgba(255,255,255,0.03)" />
+          </g>
+
+          <!-- Left Eye -->
+          <g class="mascot-left-eye">
+            <g class="mascot-eye-group">
+              <!-- Eye white -->
+              <ellipse cx="65" cy="65" rx="18" ry="20" fill="#e2e8f0" />
+              <ellipse cx="65" cy="65" rx="16" ry="18" fill="#f1f5f9" />
+              <!-- Pupil -->
+              <g class="mascot-pupil">
+                <circle cx="65" cy="65" r="9" fill="#1e293b" />
+                <circle cx="65" cy="63" r="5" fill="#0f172a" />
+              </g>
+              <!-- Eye shine / sparkle -->
+              <circle class="mascot-eye-shine" cx="60" cy="59" r="3" fill="white" opacity="0.8" filter="url(#softGlow)" />
+              <circle cx="70" cy="69" r="1.5" fill="white" opacity="0.4" />
+            </g>
+          </g>
+
+          <!-- Right Eye -->
+          <g class="mascot-right-eye">
+            <g class="mascot-eye-group">
+              <!-- Eye white -->
+              <ellipse cx="115" cy="65" rx="18" ry="20" fill="#e2e8f0" />
+              <ellipse cx="115" cy="65" rx="16" ry="18" fill="#f1f5f9" />
+              <!-- Pupil -->
+              <g class="mascot-pupil">
+                <circle cx="115" cy="65" r="9" fill="#1e293b" />
+                <circle cx="115" cy="63" r="5" fill="#0f172a" />
+              </g>
+              <!-- Eye shine / sparkle -->
+              <circle class="mascot-eye-shine" cx="110" cy="59" r="3" fill="white" opacity="0.8" filter="url(#softGlow)" />
+              <circle cx="120" cy="69" r="1.5" fill="white" opacity="0.4" />
+            </g>
+          </g>
+
+          <!-- Mouth (happy smile) -->
+          <path class="mascot-mouth" d="M 72 100 Q 90 118 108 100" stroke="#f1f5f9" stroke-width="3" fill="none" stroke-linecap="round" />
+
+          <!-- Cheek blush -->
+          <ellipse cx="48" cy="98" rx="10" ry="6" fill="#f472b6" opacity="0.15" />
+          <ellipse cx="132" cy="98" rx="10" ry="6" fill="#f472b6" opacity="0.15" />
+
+          <!-- Sparkles around the mascot -->
+          <g filter="url(#glow)">
+            <polygon class="sparkle-1" points="10,25 12,20 14,25 12,30" fill="#fbbf24" opacity="0" />
+            <polygon class="sparkle-2" points="168,35 170,30 172,35 170,40" fill="#a78bfa" opacity="0" />
+            <circle class="sparkle-3" cx="8" cy="90" r="3" fill="#34d399" opacity="0" />
+            <polygon class="sparkle-4" points="170,100 172,95 174,100 172,105" fill="#f472b6" opacity="0" />
+          </g>
+
+          <!-- Antenna / Power indicator -->
+          <circle cx="90" cy="18" r="3" fill="#10b981">
+            <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite" />
+          </circle>
+        </g>
+      </svg>
+    </div>
+
+    <h1>sweteam</h1>
+    <p class="tagline">Autonomous coding agent orchestrator &mdash; turns high-level goals into PR'd code.</p>
+    <p class="subtitle">It is not another coding agent. It orchestrates the ones you already have.</p>
+
+    <div class="badges">
+      <span class="badge">npm</span>
+      <span class="badge">Node &ge; 18</span>
+      <span class="badge">MIT License</span>
+      <span class="badge">TypeScript</span>
+    </div>
+
+    <div class="hero-actions">
+      <a href="#quickstart" class="btn btn-primary">Get Started</a>
+      <a href="https://github.com/SiluPanda/sweteam" class="btn btn-secondary" target="_blank" rel="noopener">
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        View on GitHub
+      </a>
+    </div>
+
+    <div class="install-box">
+      <span class="prompt">$</span>
+      <span class="cmd">npm install -g sweteam</span>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Why sweteam ─────────────────────────────────────── -->
+<section id="why" class="fade-in">
+  <div class="container">
+    <h2 class="section-title">Why sweteam?</h2>
+    <p class="section-subtitle">
+      Real software isn't built by a single person typing in a terminal. It's built by <strong style="color:#f1f5f9">teams</strong> &mdash; a tech lead breaks down the work, engineers pick up tasks, reviewers catch mistakes, and the whole thing ships through a structured process.
+    </p>
+    <p style="color:#94a3b8; margin-bottom: 2rem;">
+      sweteam brings that same discipline to AI coding agents. It doesn't replace your coding agents &mdash; it gives them the same structure that makes real engineering teams ship reliable code.
+    </p>
+
+    <div class="workflow">
+      <div class="workflow-step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h3>You (PM)</h3>
+          <p>Describe what you want. The planner asks questions, proposes an architecture, and breaks it into scoped tasks &mdash; just like a tech lead running a planning session.</p>
+        </div>
+      </div>
+      <div class="workflow-step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h3>Planner (Tech Lead)</h3>
+          <p>Decomposes your goal into small tasks with acceptance criteria, dependency order, and file-level scope. You review and refine before anything gets built.</p>
+        </div>
+      </div>
+      <div class="workflow-step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h3>Coders (Engineers)</h3>
+          <p>Each task is assigned to a coding agent on its own branch. Independent tasks run in parallel &mdash; like engineers on a team working on separate features simultaneously.</p>
+        </div>
+      </div>
+      <div class="workflow-step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h3>Reviewer (Senior Engineer)</h3>
+          <p>A separate agent reviews each task's diff against its acceptance criteria. If the review fails, the coder automatically retries until the reviewer is satisfied.</p>
+        </div>
+      </div>
+      <div class="workflow-step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <h3>Git + PR (CI/CD)</h3>
+          <p>Approved tasks are merged, the branch is pushed, and a PR is opened. The session stays open &mdash; give feedback, agents iterate on the same PR until you're satisfied.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Features ────────────────────────────────────────── -->
+<section id="features" class="fade-in">
+  <div class="container">
+    <h2 class="section-title">Features</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>&#128203; Session-based</h3>
+        <p>Every interaction lives in a persistent session with full history. Crash, close the terminal, come back tomorrow &mdash; nothing is lost.</p>
+      </div>
+      <div class="feature-card">
+        <h3>&#9889; Zero config</h3>
+        <p>Discovers installed CLIs automatically and uses their existing auth. No API keys to configure, no extra setup.</p>
+      </div>
+      <div class="feature-card">
+        <h3>&#128172; Human-in-the-loop</h3>
+        <p>Chat with the planner, refine the plan, then go hands-off. You stay in control of the strategy.</p>
+      </div>
+      <div class="feature-card">
+        <h3>&#127919; Parallel execution</h3>
+        <p>Independent tasks run concurrently across multiple agents, organized into a dependency graph (DAG).</p>
+      </div>
+      <div class="feature-card">
+        <h3>&#128269; Multi-model review</h3>
+        <p>Every task is reviewed by a separate agent against its acceptance criteria. Failures are retried automatically.</p>
+      </div>
+      <div class="feature-card">
+        <h3>&#128260; Feedback iterations</h3>
+        <p>Session stays open after the PR. Give feedback, agents iterate on the same PR until you're satisfied.</p>
+      </div>
+      <div class="feature-card">
+        <h3>&#128250; Live attach</h3>
+        <p>Re-enter any session and see agent output streaming in real time. Never lose track of what's happening.</p>
+      </div>
+      <div class="feature-card">
+        <h3>&#128268; Pluggable agents</h3>
+        <p>Supports Claude Code, Codex CLI, OpenCode, or any custom CLI that reads stdin and writes stdout.</p>
+      </div>
+      <div class="feature-card">
+        <h3>&#128736; Git native</h3>
+        <p>All git and GitHub operations via <code>git</code> and <code>gh</code> CLI directly. No abstractions, no surprises.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── How It Works ────────────────────────────────────── -->
+<section id="how-it-works" class="fade-in">
+  <div class="container">
+    <h2 class="section-title">How It Works</h2>
+    <p class="section-subtitle">sweteam follows a structured pipeline from plan to PR.</p>
+
+    <div class="feature-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+      <div class="feature-card" style="text-align:center;">
+        <h3 style="justify-content:center;">Plan</h3>
+        <p>Planner decomposes your goal into tasks with dependencies</p>
+      </div>
+      <div class="feature-card" style="text-align:center;">
+        <h3 style="justify-content:center;">DAG</h3>
+        <p>Tasks organized into a dependency graph</p>
+      </div>
+      <div class="feature-card" style="text-align:center;">
+        <h3 style="justify-content:center;">Dispatch</h3>
+        <p>Independent tasks run concurrently</p>
+      </div>
+      <div class="feature-card" style="text-align:center;">
+        <h3 style="justify-content:center;">Code</h3>
+        <p>Each task assigned to a coding agent on its own branch</p>
+      </div>
+      <div class="feature-card" style="text-align:center;">
+        <h3 style="justify-content:center;">Review</h3>
+        <p>Reviewer checks diff against acceptance criteria</p>
+      </div>
+      <div class="feature-card" style="text-align:center;">
+        <h3 style="justify-content:center;">Fix Loop</h3>
+        <p>If review finds issues, coder retries automatically</p>
+      </div>
+      <div class="feature-card" style="text-align:center;">
+        <h3 style="justify-content:center;">Merge</h3>
+        <p>Approved tasks squash-merged into session branch</p>
+      </div>
+      <div class="feature-card" style="text-align:center;">
+        <h3 style="justify-content:center;">PR</h3>
+        <p>Branch pushed and GitHub PR created automatically</p>
+      </div>
+    </div>
+
+    <h3 style="color:#f1f5f9; margin-top: 3rem; margin-bottom: 1rem;">Session Lifecycle</h3>
+    <pre><code>                    /create
+                       │
+                       v
+        ┌──────────────────────────┐
+        │        planning          │ &lt;── chat with planner
+        └────────────┬─────────────┘
+                     │ @build
+                     v
+        ┌──────────────────────────┐
+        │        building          │ &lt;── agents code + review
+        └────────────┬─────────────┘
+                     │
+                     v
+        ┌──────────────────────────┐
+        │    awaiting_feedback     │ &lt;── PR created, user reviews
+        └────────────┬─────────────┘
+                     │ @feedback
+                     v
+        ┌──────────────────────────┐
+        │        iterating         │ &lt;── agents apply feedback
+        └────────────┬─────────────┘
+                     │
+                     v
+              awaiting_feedback ─── (loops until satisfied)
+                     │
+                     │ /stop
+                     v
+        ┌──────────────────────────┐
+        │         stopped          │
+        └──────────────────────────┘</code></pre>
+  </div>
+</section>
+
+<!-- ─── Quick Start ─────────────────────────────────────── -->
+<section id="quickstart" class="fade-in">
+  <div class="container">
+    <h2 class="section-title">Quick Start</h2>
+
+    <h3 style="color:#f1f5f9; margin-bottom: 0.5rem;">Prerequisites</h3>
+    <p style="color:#94a3b8; margin-bottom: 1rem;">You need at least <strong style="color:#f1f5f9">one</strong> coding CLI installed:</p>
+    <table>
+      <thead><tr><th>CLI</th><th>Install</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://docs.anthropic.com/en/docs/claude-code" target="_blank" rel="noopener">Claude Code</a></td><td><code>npm install -g @anthropic-ai/claude-code</code></td></tr>
+        <tr><td><a href="https://github.com/openai/codex" target="_blank" rel="noopener">Codex CLI</a></td><td><code>npm install -g @openai/codex</code></td></tr>
+        <tr><td><a href="https://github.com/opencode-ai/opencode" target="_blank" rel="noopener">OpenCode</a></td><td><code>go install github.com/opencode-ai/opencode@latest</code></td></tr>
+      </tbody>
+    </table>
+    <p style="color:#94a3b8; margin: 1rem 0;">Plus: <code>git</code>, <code>gh</code> (GitHub CLI, authenticated), and <strong style="color:#f1f5f9">Node.js v18+</strong>.</p>
+
+    <h3 style="color:#f1f5f9; margin: 2rem 0 0.5rem;">1. Install</h3>
+    <pre><code>npm install -g sweteam</code></pre>
+
+    <h3 style="color:#f1f5f9; margin: 2rem 0 0.5rem;">2. Initialize</h3>
+    <pre><code>sweteam init</code></pre>
+    <p style="color:#94a3b8; margin: 0.5rem 0 1rem;">Auto-discovers your installed CLIs and generates <code>~/.sweteam/config.toml</code>.</p>
+
+    <h3 style="color:#f1f5f9; margin: 2rem 0 0.5rem;">3. Create a session</h3>
+    <pre><code>sweteam create myrepo
+# Or from the interactive REPL:
+sweteam
+sweteam&gt; /create myrepo</code></pre>
+
+    <h3 style="color:#f1f5f9; margin: 2rem 0 0.5rem;">4. Plan interactively</h3>
+    <pre><code>myrepo&gt; Add dark theme with system preference detection and a Ctrl+T toggle
+
+▶ Planner ─ s_a1b2c3d4: Add dark theme
+────────────────────────────────────────
+│ I'll break this down into 6 tasks:
+│ task-001: Add ThemeConfig and color definitions
+│ task-002: Implement system preference detection
+│ task-003: Create dark theme preset
+│ ...
+│ Type @build when you're ready.
+
+myrepo&gt; @build</code></pre>
+
+    <h3 style="color:#f1f5f9; margin: 2rem 0 0.5rem;">5. Watch it build</h3>
+    <p style="color:#94a3b8; margin-bottom: 1rem;">sweteam dispatches tasks to coding agents, runs reviews, and creates a PR &mdash; all autonomously.</p>
+
+    <h3 style="color:#f1f5f9; margin: 2rem 0 0.5rem;">6. Give feedback</h3>
+    <pre><code>myrepo&gt; @feedback The dark theme colors are too muted. Make the accent brighter (#00BFFF).</code></pre>
+    <p style="color:#94a3b8; margin: 0.5rem 0;">Agents pick up your feedback, iterate, and push updates to the same PR.</p>
+  </div>
+</section>
+
+<!-- ─── Commands ────────────────────────────────────────── -->
+<section id="commands" class="fade-in">
+  <div class="container">
+    <h2 class="section-title">Commands</h2>
+
+    <h3 style="color:#f1f5f9; margin-bottom: 1rem;">Top-level commands</h3>
+    <table>
+      <thead><tr><th>Command</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>sweteam</code></td><td>Launch interactive REPL</td></tr>
+        <tr><td><code>sweteam init</code></td><td>Auto-discover CLIs and generate config</td></tr>
+        <tr><td><code>sweteam create [repo]</code></td><td>Create a new session</td></tr>
+        <tr><td><code>sweteam list</code></td><td>List all sessions</td></tr>
+        <tr><td><code>sweteam enter &lt;id&gt;</code></td><td>Re-enter an existing session</td></tr>
+        <tr><td><code>sweteam show &lt;id&gt;</code></td><td>Show detailed session status</td></tr>
+        <tr><td><code>sweteam stop &lt;id&gt;</code></td><td>Stop a session</td></tr>
+        <tr><td><code>sweteam delete &lt;id&gt;</code></td><td>Delete a session</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="color:#f1f5f9; margin: 2rem 0 1rem;">In-session commands</h3>
+    <table>
+      <thead><tr><th>Command</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>@build</code></td><td>Finalize plan and start autonomous coding</td></tr>
+        <tr><td><code>@status</code></td><td>Show task progress dashboard</td></tr>
+        <tr><td><code>@plan</code></td><td>Re-display the current plan</td></tr>
+        <tr><td><code>@feedback &lt;text&gt;</code></td><td>Give feedback on completed work (triggers new iteration)</td></tr>
+        <tr><td><code>@diff</code></td><td>Show cumulative diff</td></tr>
+        <tr><td><code>@pr</code></td><td>Show the PR link</td></tr>
+        <tr><td><code>@tasks</code></td><td>List all tasks with statuses and review info</td></tr>
+        <tr><td><code>@stop</code></td><td>Stop this session</td></tr>
+        <tr><td><code>@help</code></td><td>Show available commands</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="color:#f1f5f9; margin: 2rem 0 1rem;">REPL commands</h3>
+    <table>
+      <thead><tr><th>Command</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>/create [repo]</code></td><td>Start a new session</td></tr>
+        <tr><td><code>/list</code></td><td>See all sessions</td></tr>
+        <tr><td><code>/enter &lt;id&gt;</code></td><td>Resume a session</td></tr>
+        <tr><td><code>/show &lt;id&gt;</code></td><td>Inspect a session</td></tr>
+        <tr><td><code>/stop &lt;id&gt;</code></td><td>Stop a session</td></tr>
+        <tr><td><code>/delete &lt;id&gt;</code></td><td>Delete a session</td></tr>
+        <tr><td><code>/init</code></td><td>Re-run CLI discovery</td></tr>
+        <tr><td><code>/help</code></td><td>Show help</td></tr>
+        <tr><td><code>/exit</code></td><td>Quit</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="color:#f1f5f9; margin: 2rem 0 1rem;">CLI flags</h3>
+    <pre><code>sweteam --coder codex          # Override coder agent
+sweteam --reviewer claude-code # Override reviewer agent
+sweteam --parallel 5           # Override max parallel tasks
+sweteam --config ./custom.toml # Use custom config file</code></pre>
+  </div>
+</section>
+
+<!-- ─── Architecture ────────────────────────────────────── -->
+<section id="architecture" class="fade-in">
+  <div class="container">
+    <h2 class="section-title">Architecture</h2>
+    <p class="section-subtitle">sweteam is built with TypeScript and uses a layered architecture with pluggable agent adapters.</p>
+
+    <div class="arch-box">
+      <pre><code>┌──────────────────────────────────────────────────────────┐
+│                       sweteam CLI                        │
+│                                                          │
+│  ┌──────────┐  ┌──────────────┐  ┌────────────────────┐  │
+│  │ Session  │  │   Planner    │  │  Orchestrator      │  │
+│  │ Manager  │  │  (chat mode) │  │  (autonomous)      │  │
+│  └──────────┘  └──────────────┘  └────────────────────┘  │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │          Agent Adapter Layer                       │  │
+│  │ ┌────────────┐ ┌──────────┐ ┌────────────────────┐ │  │
+│  │ │ Claude Code│ │ Codex CLI│ │ OpenCode / Custom  │ │  │
+│  │ └────────────┘ └──────────┘ └────────────────────┘ │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌──────────────────────┐  ┌──────────────────────────┐  │
+│  │  SQLite + Drizzle    │  │  git + gh CLI (native)   │  │
+│  │  (session store)     │  │  (branches, PRs, commits)│  │
+│  └──────────────────────┘  └──────────────────────────┘  │
+└──────────────────────────────────────────────────────────┘</code></pre>
+    </div>
+
+    <h3 style="color:#f1f5f9; margin: 2rem 0 1rem;">Tech Stack</h3>
+    <table>
+      <thead><tr><th>Component</th><th>Choice</th></tr></thead>
+      <tbody>
+        <tr><td>Language</td><td>TypeScript (ESM, Node.js 18+)</td></tr>
+        <tr><td>ORM</td><td>Drizzle</td></tr>
+        <tr><td>Database</td><td>SQLite via better-sqlite3</td></tr>
+        <tr><td>CLI framework</td><td>Commander.js</td></tr>
+        <tr><td>Terminal UI</td><td>Custom (chalk, raw-mode prompt)</td></tr>
+        <tr><td>Git</td><td><code>git</code> + <code>gh</code> CLI (child process)</td></tr>
+        <tr><td>IDs</td><td>nanoid</td></tr>
+        <tr><td>Config</td><td>TOML</td></tr>
+        <tr><td>Tests</td><td>Vitest</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="color:#f1f5f9; margin: 2rem 0 1rem;">Project Structure</h3>
+    <pre><code>src/
+├── index.ts                 # CLI entry point (Commander.js)
+├── repl/                    # Interactive REPL loop
+├── session/                 # Session manager, state machine, agent log
+├── planner/                 # Planner agent and plan parser
+├── orchestrator/            # Task runner, reviewer, build/feedback handlers
+├── adapters/                # Agent adapters (claude-code, codex, opencode, custom)
+├── commands/                # CLI subcommands (create, list, enter, etc.)
+├── config/                  # Config loader and GitHub auth
+├── git/                     # Git and GitHub CLI wrappers
+├── ui/                      # Terminal UI (banner, prompt, agent panel, markdown)
+├── db/                      # SQLite schema and client (Drizzle ORM)
+└── __tests__/               # Test suite</code></pre>
+
+    <h3 style="color:#f1f5f9; margin: 2rem 0 1rem;">Data Storage</h3>
+    <pre><code>~/.sweteam/
+├── sweteam.db          # SQLite database (sessions, tasks, messages)
+├── config.toml         # Global configuration
+├── logs/               # Agent output logs (for live attach)
+│   └── s_a1b2c3d4.jsonl
+└── repos/              # Cloned repositories
+    └── YourName--myrepo/</code></pre>
+    <ul style="color:#94a3b8; margin-top: 1rem; padding-left: 1.5rem; list-style: disc;">
+      <li><strong style="color:#f1f5f9">No API keys stored</strong> &mdash; coding CLIs manage their own authentication</li>
+      <li><strong style="color:#f1f5f9">No network calls</strong> &mdash; sweteam itself makes zero API requests</li>
+      <li><strong style="color:#f1f5f9">Full audit trail</strong> &mdash; every prompt, response, and system event is stored per session</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─── Configuration ───────────────────────────────────── -->
+<section id="configuration" class="fade-in">
+  <div class="container">
+    <h2 class="section-title">Configuration</h2>
+    <p class="section-subtitle">Config lives at <code>~/.sweteam/config.toml</code>. Generated by <code>sweteam init</code>.</p>
+
+    <pre><code>[roles]
+planner = "claude-code"       # Which CLI generates the plan
+coder = "claude-code"         # Which CLI writes code
+reviewer = "claude-code"      # Which CLI reviews code
+
+[execution]
+max_parallel = 3              # Concurrent coding agents
+max_review_cycles = 3         # Review/fix loops before escalating
+branch_prefix = "sw/"         # Prefix for all branches
+
+[git]
+commit_style = "conventional" # conventional | simple
+squash_on_merge = true
+
+[agents.claude-code]
+command = "claude"
+args = ["-p"]
+
+[agents.codex]
+command = "codex"
+args = ["-q"]
+
+[agents.opencode]
+command = "opencode"
+args = ["--non-interactive"]</code></pre>
+
+    <h3 style="color:#f1f5f9; margin: 2rem 0 1rem;">Custom Agents</h3>
+    <p style="color:#94a3b8; margin-bottom: 1rem;">Any CLI that accepts a prompt on stdin and writes output to stdout can be used as an agent:</p>
+    <pre><code>[agents.my-agent]
+command = "my-coding-tool"
+args = ["--mode", "autonomous"]
+prompt_via = "stdin"          # stdin | arg | file
+output_from = "stdout"        # stdout | file
+
+# Then reference it in your roles:
+[roles]
+coder = "my-agent"</code></pre>
+  </div>
+</section>
+
+<!-- ─── Development ─────────────────────────────────────── -->
+<section id="development" class="fade-in">
+  <div class="container">
+    <h2 class="section-title">Development</h2>
+
+    <h3 style="color:#f1f5f9; margin-bottom: 0.5rem;">From source</h3>
+    <pre><code>git clone https://github.com/SiluPanda/sweteam.git
+cd sweteam
+npm install
+
+# Run in dev mode (no build step)
+npm run dev
+
+# Run with subcommands
+npm run dev -- create myrepo
+
+# Run tests
+npm test
+
+# Build
+npm run build
+
+# Link globally for testing
+npm link</code></pre>
+
+    <h3 style="color:#f1f5f9; margin: 2rem 0 1rem;">Contributing</h3>
+    <p style="color:#94a3b8; margin-bottom: 1rem;">Contributions are welcome. Please open an issue first to discuss what you'd like to change.</p>
+    <pre><code># Fork and clone
+git clone https://github.com/your-name/sweteam.git
+cd sweteam
+npm install
+
+# Create a branch
+git checkout -b feat/my-feature
+
+# Make changes, run tests
+npm test
+
+# Submit a PR</code></pre>
+  </div>
+</section>
+
+<!-- ─── Footer ──────────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <p>
+      <a href="https://github.com/SiluPanda/sweteam" target="_blank" rel="noopener">sweteam</a> &mdash; MIT License &copy; 2026 Silu Panda
+    </p>
+  </div>
+</footer>
+
+<!-- ─── Scroll Fade-in Script ───────────────────────────── -->
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Interactive eye tracking on mouse move
+  const mascotSvg = document.querySelector('.mascot-svg');
+  if (mascotSvg) {
+    const pupils = mascotSvg.querySelectorAll('.mascot-pupil');
+
+    // Stop the CSS animation after first loop and switch to mouse tracking
+    let mouseActive = false;
+
+    document.addEventListener('mousemove', (e) => {
+      if (!mouseActive) {
+        // Disable the CSS pupil animation when mouse starts moving
+        pupils.forEach(p => {
+          p.style.animation = 'none';
+        });
+        mouseActive = true;
+      }
+
+      const rect = mascotSvg.getBoundingClientRect();
+      const svgCenterX = rect.left + rect.width / 2;
+      const svgCenterY = rect.top + rect.height / 2;
+
+      const dx = e.clientX - svgCenterX;
+      const dy = e.clientY - svgCenterY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const maxMove = 7;
+      const factor = Math.min(dist / 300, 1);
+
+      const moveX = (dx / (dist || 1)) * maxMove * factor;
+      const moveY = (dy / (dist || 1)) * maxMove * factor;
+
+      pupils.forEach(p => {
+        p.style.transform = `translate(${moveX}px, ${moveY}px)`;
+      });
+    });
+
+    // Re-enable CSS animation when mouse leaves the viewport
+    document.addEventListener('mouseleave', () => {
+      mouseActive = false;
+      pupils.forEach(p => {
+        p.style.animation = '';
+        p.style.transform = '';
+      });
+    });
+  }
+</script>
+
+</body>
+</html>
