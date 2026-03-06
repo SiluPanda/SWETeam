@@ -51,8 +51,15 @@ describe("orchestrator/build-handler — generatePrBody", () => {
 
 describe("orchestrator/build-handler — formatCompletionReport", () => {
   it("should show build complete header", () => {
+    // With failures present, report says "finished with failures"
     const report = formatCompletionReport(mockResults, mockTasks);
-    expect(report).toContain("Build complete.");
+    expect(report).toContain("Build finished with failures.");
+
+    // With all tasks passing, report says "Build complete."
+    const successResults = { completed: ["task-001"], failed: [], blocked: [] };
+    const successTasks = [{ id: "task-001", title: "Add config", status: "done" }];
+    const successReport = formatCompletionReport(successResults, successTasks);
+    expect(successReport).toContain("Build complete.");
   });
 
   it("should show task statuses", () => {

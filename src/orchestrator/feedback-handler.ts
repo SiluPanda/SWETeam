@@ -1,7 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { getDb } from "../db/client.js";
-import { iterations, tasks as tasksTable } from "../db/schema.js";
+import { iterations, sessions, tasks as tasksTable } from "../db/schema.js";
 import { transition } from "../session/state-machine.js";
 import { addMessage, getSession } from "../session/manager.js";
 import { resolveAdapter } from "../adapters/adapter.js";
@@ -13,7 +13,7 @@ import {
   scopeTaskId,
   type OrchestratorCallbacks,
 } from "./orchestrator.js";
-import { pushBranch, git, deleteBranches, cleanupWorktrees } from "../git/git.js";
+import { pushBranch, createPR, getDefaultBranch, git, deleteBranches, cleanupWorktrees } from "../git/git.js";
 import { runParallelOrchestrator } from "./parallel-runner.js";
 import { clearLog, writeEvent } from "../session/agent-log.js";
 
@@ -317,6 +317,29 @@ export async function handleFeedback(
     console.log("Build was interrupted — retrying all tasks...\n");
   }
 
+  // Re-queue any tasks still in failed/blocked state so the orchestrator retries them.
+  // The plan delta may not explicitly mention every failed task, but they all need another chance.
+  {
+    const remainingTasks = getTasksForSession(sessionId);
+    for (const t of remainingTasks) {
+      if (t.status === "failed" || t.status === "blocked") {
+        db.update(tasksTable)
+          .set({
+            status: "queued",
+            reviewVerdict: null,
+            reviewIssues: null,
+            reviewCycles: 0,
+            diffPatch: null,
+            agentOutput: null,
+            branchName: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(tasksTable.id, t.id))
+          .run();
+      }
+    }
+  }
+
   // Re-run orchestrator on modified/new tasks
   const repoPath = session.repoLocalPath!;
   const sessionBranch = session.workingBranch!;
@@ -379,9 +402,28 @@ export async function handleFeedback(
   }
   writeEvent(sessionId, { type: "build-complete", id: "build" });
 
-  // Push updates
+  // Push and create/update PR
   try {
     pushBranch(sessionBranch, repoPath);
+
+    // Create PR if one doesn't exist yet (e.g. initial build had failures)
+    const updatedSession = getSession(sessionId);
+    if (!updatedSession?.prUrl) {
+      try {
+        const baseBranch = getDefaultBranch(repoPath);
+        const prUrl = createPR(session.goal ?? "sweteam iteration", "", baseBranch, sessionBranch, repoPath);
+        const prMatch = prUrl.match(/\/pull\/(\d+)/);
+        const prNumber = prMatch ? parseInt(prMatch[1], 10) : null;
+        db.update(sessions)
+          .set({ prUrl, prNumber, updatedAt: new Date() })
+          .where(eq(sessions.id, sessionId))
+          .run();
+        addMessage(sessionId, "system", `PR created: ${prUrl}`);
+      } catch (prErr) {
+        const prMsg = prErr instanceof Error ? prErr.message : String(prErr);
+        addMessage(sessionId, "system", `Failed to create PR: ${prMsg}`);
+      }
+    }
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
     addMessage(sessionId, "system", `Failed to push: ${errMsg}`);
@@ -395,8 +437,6 @@ export async function handleFeedback(
   }
 
   if (!allQueued) {
-    // Update only the current iteration status (not all iterations)
-    // Find the latest iteration number for this session
     const latestIter = getIterationHistory(sessionId);
     const latestNum = latestIter.length > 0 ? latestIter[latestIter.length - 1].iterationNumber : null;
     if (latestNum !== null) {
@@ -410,7 +450,7 @@ export async function handleFeedback(
         )
         .run();
     }
-    addMessage(sessionId, "system", `Iteration complete. PR updated.`);
+    addMessage(sessionId, "system", `Iteration complete.`);
   } else {
     addMessage(sessionId, "system", "Build retry complete.");
   }

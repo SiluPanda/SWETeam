@@ -77,7 +77,9 @@ export function formatCompletionReport(
   prUrl?: string,
 ): string {
   const lines: string[] = [];
-  lines.push("Build complete.");
+  const hasFailures = taskResults.failed.length > 0 || taskResults.blocked.length > 0;
+
+  lines.push(hasFailures ? "Build finished with failures." : "Build complete.");
   lines.push("");
 
   for (const task of allTasks) {
@@ -103,7 +105,12 @@ export function formatCompletionReport(
     lines.push(`PR: ${prUrl}`);
   }
   lines.push("");
-  lines.push("Review the PR and type @feedback with any changes needed.");
+  if (hasFailures) {
+    lines.push(`${taskResults.failed.length} failed, ${taskResults.blocked.length} blocked.`);
+    lines.push("Type @feedback with guidance to retry failed tasks, or @build to restart.");
+  } else {
+    lines.push("Review the PR and type @feedback with any changes needed.");
+  }
 
   return lines.join("\n");
 }
@@ -235,9 +242,10 @@ export async function handleBuild(
     status: t.status,
   }));
 
-  // Push and create PR if any tasks completed
+  // Only create PR when all tasks succeeded — don't publish partial/broken work
   let prUrl: string | undefined;
-  if (result.completed.length > 0) {
+  const allSucceeded = result.failed.length === 0 && result.blocked.length === 0 && result.completed.length > 0;
+  if (allSucceeded) {
     try {
       pushBranch(sessionBranch, repoPath);
 
