@@ -17,13 +17,11 @@ describe('git/git — resolveRepo', () => {
     expect(result).toBe('SiluPanda/weav');
   });
 
-  it.skipIf(!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN)(
-    'should resolve short name via gh api',
-    () => {
-      // This test requires gh auth — it calls the real gh CLI
-      const result = resolveRepo('sweteam');
-      expect(result).toContain('/sweteam');
-      expect(result).toMatch(/^[^/]+\/sweteam$/);
-    },
-  );
+  it.skipIf(!!process.env.CI)('should resolve short name via gh api', () => {
+    // This test calls `gh api user` which requires a personal token with user scope.
+    // GitHub Actions' automatic token (github.token) lacks this scope, so skip in CI.
+    const result = resolveRepo('sweteam');
+    expect(result).toContain('/sweteam');
+    expect(result).toMatch(/^[^/]+\/sweteam$/);
+  });
 });
