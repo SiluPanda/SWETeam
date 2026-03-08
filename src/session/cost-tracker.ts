@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
-import { getDb } from "../db/client.js";
-import { sessions, tasks as tasksTable } from "../db/schema.js";
+import { eq } from 'drizzle-orm';
+import { getDb } from '../db/client.js';
+import { tasks as tasksTable } from '../db/schema.js';
 
 export interface CostSummary {
   sessionId: string;
@@ -31,7 +31,7 @@ export function getSessionCost(sessionId: string): CostSummary {
 
   let totalInvocations = 0;
   let totalDurationMs = 0;
-  const breakdown: CostSummary["taskBreakdown"] = [];
+  const breakdown: CostSummary['taskBreakdown'] = [];
 
   for (const task of taskRows) {
     // Each task = 1 coder invocation + reviewCycles reviewer invocations
@@ -69,19 +69,14 @@ export function formatCostSummary(cost: CostSummary): string {
   const lines: string[] = [];
   lines.push(`Cost Summary — ${cost.sessionId}`);
   lines.push(`  Total agent invocations: ${cost.totalInvocations}`);
-  lines.push(
-    `  Total duration: ${(cost.totalDurationMs / 1000).toFixed(1)}s`,
-  );
-  lines.push("");
-  lines.push("  Task Breakdown:");
+  lines.push(`  Total duration: ${(cost.totalDurationMs / 1000).toFixed(1)}s`);
+  lines.push('');
+  lines.push('  Task Breakdown:');
 
   for (const task of cost.taskBreakdown) {
-    const dur =
-      task.durationMs > 0 ? ` (${(task.durationMs / 1000).toFixed(1)}s)` : "";
-    lines.push(
-      `    ${task.taskId}: ${task.title}${dur} — ${task.reviewCycles} review cycles`,
-    );
+    const dur = task.durationMs > 0 ? ` (${(task.durationMs / 1000).toFixed(1)}s)` : '';
+    lines.push(`    ${task.taskId}: ${task.title}${dur} — ${task.reviewCycles} review cycles`);
   }
 
-  return lines.join("\n");
+  return lines.join('\n');
 }

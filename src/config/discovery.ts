@@ -1,4 +1,4 @@
-import { execFileSync } from "child_process";
+import { execFileSync } from 'child_process';
 
 export interface CliInfo {
   name: string;
@@ -8,19 +8,19 @@ export interface CliInfo {
 }
 
 const CLI_TOOLS = [
-  { name: "claude", versionFlag: "--version" },
-  { name: "codex", versionFlag: "--version" },
-  { name: "opencode", versionFlag: "--version" },
-  { name: "gh", versionFlag: "--version" },
-  { name: "git", versionFlag: "--version" },
+  { name: 'claude', versionFlag: '--version' },
+  { name: 'codex', versionFlag: '--version' },
+  { name: 'opencode', versionFlag: '--version' },
+  { name: 'gh', versionFlag: '--version' },
+  { name: 'git', versionFlag: '--version' },
 ] as const;
 
 function tryExecFile(command: string, args: string[]): string | null {
   try {
     return execFileSync(command, args, {
-      encoding: "utf-8",
+      encoding: 'utf-8',
       timeout: 5000,
-      stdio: ["pipe", "pipe", "pipe"],
+      stdio: ['pipe', 'pipe', 'pipe'],
     }).trim();
   } catch {
     return null;
@@ -28,15 +28,13 @@ function tryExecFile(command: string, args: string[]): string | null {
 }
 
 function detectCli(name: string, versionFlag: string): CliInfo {
-  const whichResult = tryExecFile("which", [name]);
+  const whichResult = tryExecFile('which', [name]);
   if (!whichResult) {
     return { name, available: false };
   }
 
   const versionResult = tryExecFile(name, [versionFlag]);
-  const version = versionResult
-    ? versionResult.split("\n")[0].trim()
-    : undefined;
+  const version = versionResult ? versionResult.split('\n')[0].trim() : undefined;
 
   return {
     name,
@@ -59,16 +57,16 @@ export function getDiscoveredAgents(
     if (!cli.available) continue;
 
     switch (cli.name) {
-      case "claude":
-        agents["claude-code"] = { command: "claude", args: ["-p"] };
+      case 'claude':
+        agents['claude-code'] = { command: 'claude', args: ['-p'] };
         break;
-      case "codex":
-        agents["codex"] = { command: "codex", args: ["-q"] };
+      case 'codex':
+        agents['codex'] = { command: 'codex', args: ['-q'] };
         break;
-      case "opencode":
-        agents["opencode"] = {
-          command: "opencode",
-          args: ["--non-interactive"],
+      case 'opencode':
+        agents['opencode'] = {
+          command: 'opencode',
+          args: ['--non-interactive'],
         };
         break;
     }

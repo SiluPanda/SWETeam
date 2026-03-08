@@ -1,9 +1,9 @@
-import chalk from "chalk";
-import os from "os";
-import { createRequire } from "module";
+import chalk from 'chalk';
+import os from 'os';
+import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-const pkg = require("../../package.json") as { version: string };
+const pkg = require('../../package.json') as { version: string };
 const VERSION = pkg.version;
 
 // ── Blue theme palette ──────────────────────────────────────────────
@@ -18,20 +18,20 @@ const cmd = chalk.cyanBright;
 /** Visible length of a string after stripping ANSI escape codes. */
 export function vLen(s: string): number {
   // eslint-disable-next-line no-control-regex
-  return s.replace(/\x1b\[[0-9;]*m/g, "").length;
+  return s.replace(/\x1b\[[0-9;]*m/g, '').length;
 }
 
 /** Pad string to `w` visible characters (right-pad with spaces). */
 export function rPad(s: string, w: number): string {
   const diff = w - vLen(s);
-  return diff > 0 ? s + " ".repeat(diff) : s;
+  return diff > 0 ? s + ' '.repeat(diff) : s;
 }
 
 /** Shorten cwd by replacing homedir with ~. */
 function shortCwd(): string {
   const cwd = process.cwd();
   const home = os.homedir();
-  return cwd.startsWith(home) ? "~" + cwd.slice(home.length) : cwd;
+  return cwd.startsWith(home) ? '~' + cwd.slice(home.length) : cwd;
 }
 
 // ── Public API ──────────────────────────────────────────────────────
@@ -52,70 +52,71 @@ export function renderBanner(sessions: RecentSession[] = []): string {
 
   // ── Mascot (from README, blue-styled) ──
   const mascot = [
-    accent("  ┌─────────────────┐"),
-    accent("  │") + "    ◉       ◉    " + accent("│"),
-    accent("  │") + "    ─────────    " + accent("│"),
-    accent("  └─────────────────┘"),
+    accent('  ┌─────────────────┐'),
+    accent('  │') + '    ◉       ◉    ' + accent('│'),
+    accent('  │') + '    ─────────    ' + accent('│'),
+    accent('  └─────────────────┘'),
   ];
 
   // ── Left column ──
   const left: string[] = [
-    "",
-    title("        Welcome to sweteam!"),
-    "",
-    ...mascot.map((l) => "        " + l),
-    "",
+    '',
+    title('        Welcome to sweteam!'),
+    '',
+    ...mascot.map((l) => '        ' + l),
+    '',
     dim(`      Orchestrator · v${VERSION}`),
-    dim("      " + shortCwd()),
-    "",
+    dim('      ' + shortCwd()),
+    '',
   ];
 
   // ── Right column ──
   const maxCmdPad = Math.max(RW - 30, 4);
   const right: string[] = [
-    "",
-    title(" Getting started"),
-    " " + cmd("/create") + dim(" [repo]") + " ".repeat(Math.max(maxCmdPad - 6, 1)) + "Start a new session",
-    " " + cmd("/list") + " ".repeat(Math.max(maxCmdPad + 5, 1)) + "See all sessions",
-    " " + cmd("/enter") + dim(" <id>") + " ".repeat(Math.max(maxCmdPad - 3, 1)) + "Resume a session",
-    " " + dim("─".repeat(Math.max(RW - 4, 10))),
-    title(" Recent sessions"),
+    '',
+    title(' Getting started'),
+    ' ' +
+      cmd('/create') +
+      dim(' [repo]') +
+      ' '.repeat(Math.max(maxCmdPad - 6, 1)) +
+      'Start a new session',
+    ' ' + cmd('/list') + ' '.repeat(Math.max(maxCmdPad + 5, 1)) + 'See all sessions',
+    ' ' +
+      cmd('/enter') +
+      dim(' <id>') +
+      ' '.repeat(Math.max(maxCmdPad - 3, 1)) +
+      'Resume a session',
+    ' ' + dim('─'.repeat(Math.max(RW - 4, 10))),
+    title(' Recent sessions'),
   ];
 
   if (sessions.length > 0) {
     const maxGoal = RW - 16;
     for (const s of sessions.slice(0, 3)) {
-      const g = s.goal.length > maxGoal ? s.goal.slice(0, maxGoal - 1) + "…" : s.goal;
-      right.push(" " + dim(s.id.slice(0, 12)) + " " + g);
+      const g = s.goal.length > maxGoal ? s.goal.slice(0, maxGoal - 1) + '…' : s.goal;
+      right.push(' ' + dim(s.id.slice(0, 12)) + ' ' + g);
     }
   } else {
-    right.push(" " + dim("No recent sessions"));
+    right.push(' ' + dim('No recent sessions'));
   }
-  right.push("");
+  right.push('');
 
   // ── Equalise row count ──
   const h = Math.max(left.length, right.length);
-  while (left.length < h) left.push("");
-  while (right.length < h) right.push("");
+  while (left.length < h) left.push('');
+  while (right.length < h) right.push('');
 
   // ── Assemble box ──
   const label = ` sweteam v${VERSION} `;
   const topDashes = Math.max(IW - 3 - label.length, 0);
-  const top =
-    border("╭───") + title(label) + border("─".repeat(topDashes)) + border("╮");
-  const bot = border("╰" + "─".repeat(IW) + "╯");
+  const top = border('╭───') + title(label) + border('─'.repeat(topDashes)) + border('╮');
+  const bot = border('╰' + '─'.repeat(IW) + '╯');
 
   const rows: string[] = [top];
   for (let i = 0; i < h; i++) {
-    rows.push(
-      border("│") +
-        rPad(left[i], LW) +
-        border("│") +
-        rPad(right[i], RW) +
-        border("│"),
-    );
+    rows.push(border('│') + rPad(left[i], LW) + border('│') + rPad(right[i], RW) + border('│'));
   }
   rows.push(bot);
 
-  return rows.join("\n");
+  return rows.join('\n');
 }

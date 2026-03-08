@@ -1,59 +1,56 @@
-import { describe, it, expect } from "vitest";
-import { readFileSync } from "fs";
-import { join } from "path";
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
-describe("CLI entry point (src/index.ts)", () => {
-  const indexContent = readFileSync(
-    join(__dirname, "../index.ts"),
-    "utf-8",
-  );
+describe('CLI entry point (src/index.ts)', () => {
+  const indexContent = readFileSync(join(__dirname, '../index.ts'), 'utf-8');
 
-  it("should have a shebang line", () => {
-    expect(indexContent.startsWith("#!/usr/bin/env node")).toBe(true);
+  it('should have a shebang line', () => {
+    expect(indexContent.startsWith('#!/usr/bin/env node')).toBe(true);
   });
 
-  it("should set program name to sweteam", () => {
-    expect(indexContent).toContain('.name("sweteam")');
+  it('should set program name to sweteam', () => {
+    expect(indexContent).toContain(".name('sweteam')");
   });
 
-  it("should set version from package.json", () => {
-    expect(indexContent).toContain(".version(pkg.version)");
+  it('should set version from package.json', () => {
+    expect(indexContent).toContain('.version(pkg.version)');
   });
 
-  it("should register create command", () => {
-    expect(indexContent).toContain('.command("create")');
+  it('should register create command', () => {
+    expect(indexContent).toContain(".command('create')");
   });
 
-  it("should register list command", () => {
-    expect(indexContent).toContain('.command("list")');
+  it('should register list command', () => {
+    expect(indexContent).toContain(".command('list')");
   });
 
-  it("should register enter command", () => {
-    expect(indexContent).toContain('.command("enter")');
+  it('should register enter command', () => {
+    expect(indexContent).toContain(".command('enter')");
   });
 
-  it("should register stop command", () => {
-    expect(indexContent).toContain('.command("stop")');
+  it('should register stop command', () => {
+    expect(indexContent).toContain(".command('stop')");
   });
 
-  it("should register delete command", () => {
-    expect(indexContent).toContain('.command("delete")');
+  it('should register delete command', () => {
+    expect(indexContent).toContain(".command('delete')");
   });
 
-  it("should register init command", () => {
-    expect(indexContent).toContain('.command("init")');
+  it('should register init command', () => {
+    expect(indexContent).toContain(".command('init')");
   });
 
-  it("should call program.parse() in CLI mode", () => {
-    expect(indexContent).toContain("program.parse()");
+  it('should call program.parse() in CLI mode', () => {
+    expect(indexContent).toContain('program.parse()');
   });
 
-  it("should detect no-subcommand and launch REPL", () => {
-    expect(indexContent).toContain("hasSubcommand");
-    expect(indexContent).toContain("runRepl");
+  it('should detect no-subcommand and launch REPL', () => {
+    expect(indexContent).toContain('hasSubcommand');
+    expect(indexContent).toContain('runRepl');
   });
 
-  it("should import REPL module", () => {
-    expect(indexContent).toContain("./repl/repl.js");
+  it('should import REPL module', () => {
+    expect(indexContent).toContain('./repl/repl.js');
   });
 });

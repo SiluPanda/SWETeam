@@ -1,37 +1,37 @@
-import { spawn, execFileSync } from "child_process";
-import type { AgentAdapter, AgentResult } from "./adapter.js";
-import { trackProcess } from "../lifecycle.js";
+import { spawn, execFileSync } from 'child_process';
+import type { AgentAdapter, AgentResult } from './adapter.js';
+import { trackProcess } from '../lifecycle.js';
 
 /**
  * Format a tool_use block into a short progress line for the AgentPanel.
  */
 function formatToolProgress(toolName: string, input: Record<string, unknown>): string {
   switch (toolName) {
-    case "Read":
-      return `  Read ${input.file_path ?? ""}`;
-    case "Write":
-      return `  Write ${input.file_path ?? ""}`;
-    case "Edit":
-      return `  Edit ${input.file_path ?? ""}`;
-    case "Bash": {
-      const cmd = String(input.command ?? "");
-      return `  Bash: ${cmd.length > 60 ? cmd.slice(0, 60) + "…" : cmd}`;
+    case 'Read':
+      return `  Read ${input.file_path ?? ''}`;
+    case 'Write':
+      return `  Write ${input.file_path ?? ''}`;
+    case 'Edit':
+      return `  Edit ${input.file_path ?? ''}`;
+    case 'Bash': {
+      const cmd = String(input.command ?? '');
+      return `  Bash: ${cmd.length > 60 ? cmd.slice(0, 60) + '…' : cmd}`;
     }
-    case "Glob":
-      return `  Glob ${input.pattern ?? ""}`;
-    case "Grep":
-      return `  Grep ${input.pattern ?? ""}`;
+    case 'Glob':
+      return `  Glob ${input.pattern ?? ''}`;
+    case 'Grep':
+      return `  Grep ${input.pattern ?? ''}`;
     default:
       return `  ${toolName}`;
   }
 }
 
 export class ClaudeCodeAdapter implements AgentAdapter {
-  name = "claude-code";
+  name = 'claude-code';
 
   async isAvailable(): Promise<boolean> {
     try {
-      execFileSync("which", ["claude"], { encoding: "utf-8", stdio: "pipe" });
+      execFileSync('which', ['claude'], { encoding: 'utf-8', stdio: 'pipe' });
       return true;
     } catch {
       return false;
@@ -50,20 +50,24 @@ export class ClaudeCodeAdapter implements AgentAdapter {
     const startTime = Date.now();
 
     return new Promise((resolve, reject) => {
-      const proc = spawn("claude", ["-p", "--output-format", "stream-json", "--verbose", "--dangerously-skip-permissions"], {
-        cwd: opts.cwd,
-        stdio: ["pipe", "pipe", "pipe"],
-      });
+      const proc = spawn(
+        'claude',
+        ['-p', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions'],
+        {
+          cwd: opts.cwd,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        },
+      );
       trackProcess(proc, opts.sessionId);
 
-      let accumulatedText = "";
+      let accumulatedText = '';
       let resultText: string | null = null;
-      let stderr = "";
-      let lineBuffer = "";
+      let stderr = '';
+      let lineBuffer = '';
       let settled = false;
 
       // Prevent EPIPE crashes if process dies before stdin write
-      proc.stdin.on("error", () => {});
+      proc.stdin.on('error', () => {});
 
       function processLine(line: string) {
         const trimmed = line.trim();
@@ -74,43 +78,43 @@ export class ClaudeCodeAdapter implements AgentAdapter {
           parsed = JSON.parse(trimmed);
         } catch {
           // Non-JSON line — treat as raw text (backward compat)
-          accumulatedText += line + "\n";
-          if (opts.onOutput) opts.onOutput(line + "\n");
+          accumulatedText += line + '\n';
+          if (opts.onOutput) opts.onOutput(line + '\n');
           return;
         }
 
         const type = parsed.type as string | undefined;
 
-        if (type === "assistant") {
+        if (type === 'assistant') {
           const message = parsed.message as Record<string, unknown> | undefined;
           if (!message) return;
           const content = message.content as Array<Record<string, unknown>> | undefined;
           if (!Array.isArray(content)) return;
 
           for (const block of content) {
-            if (block.type === "tool_use") {
+            if (block.type === 'tool_use') {
               const toolName = block.name as string;
               const input = (block.input ?? {}) as Record<string, unknown>;
               const progressLine = formatToolProgress(toolName, input);
-              if (opts.onOutput) opts.onOutput(progressLine + "\n");
-            } else if (block.type === "text") {
+              if (opts.onOutput) opts.onOutput(progressLine + '\n');
+            } else if (block.type === 'text') {
               // Accumulate text silently — don't send to panel
-              accumulatedText += (block.text as string) ?? "";
+              accumulatedText += (block.text as string) ?? '';
             }
           }
-        } else if (type === "result") {
+        } else if (type === 'result') {
           // Final result — use parsed.result as the response text
-          resultText = (parsed.result as string) ?? "";
+          resultText = (parsed.result as string) ?? '';
         }
         // Ignore system, user, and other event types
       }
 
-      proc.stdout.on("data", (chunk: Buffer) => {
+      proc.stdout.on('data', (chunk: Buffer) => {
         const data = chunk.toString();
         lineBuffer += data;
 
         // Split into complete lines
-        const lines = lineBuffer.split("\n");
+        const lines = lineBuffer.split('\n');
         // Last element is incomplete — keep in buffer
         lineBuffer = lines.pop()!;
 
@@ -119,18 +123,21 @@ export class ClaudeCodeAdapter implements AgentAdapter {
         }
       });
 
-      proc.stderr.on("data", (chunk: Buffer) => {
+      proc.stderr.on('data', (chunk: Buffer) => {
         const text = chunk.toString();
         stderr += text;
       });
 
-      const timer = timeout > 0 ? setTimeout(() => {
-        settled = true;
-        proc.kill("SIGTERM");
-        reject(new Error(`Claude Code timed out after ${timeout}ms`));
-      }, timeout) : null;
+      const timer =
+        timeout > 0
+          ? setTimeout(() => {
+              settled = true;
+              proc.kill('SIGTERM');
+              reject(new Error(`Claude Code timed out after ${timeout}ms`));
+            }, timeout)
+          : null;
 
-      proc.on("close", (code) => {
+      proc.on('close', (code) => {
         if (timer) clearTimeout(timer);
         if (settled) return;
         settled = true;
@@ -138,7 +145,7 @@ export class ClaudeCodeAdapter implements AgentAdapter {
         // Flush remaining line buffer
         if (lineBuffer.trim()) {
           processLine(lineBuffer);
-          lineBuffer = "";
+          lineBuffer = '';
         }
 
         const finalOutput = resultText ?? (accumulatedText || stderr);
@@ -150,7 +157,7 @@ export class ClaudeCodeAdapter implements AgentAdapter {
         });
       });
 
-      proc.on("error", (err) => {
+      proc.on('error', (err) => {
         if (timer) clearTimeout(timer);
         if (settled) return;
         settled = true;

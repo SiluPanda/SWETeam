@@ -142,11 +142,11 @@ Inside a session, agents stream their work in real time:
 
 You need at least **one** coding CLI installed:
 
-| CLI | Install |
-|---|---|
-| [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | `npm install -g @anthropic-ai/claude-code` |
-| [Codex CLI](https://github.com/openai/codex) | `npm install -g @openai/codex` |
-| [OpenCode](https://github.com/opencode-ai/opencode) | `go install github.com/opencode-ai/opencode@latest` |
+| CLI                                                           | Install                                             |
+| ------------------------------------------------------------- | --------------------------------------------------- |
+| [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | `npm install -g @anthropic-ai/claude-code`          |
+| [Codex CLI](https://github.com/openai/codex)                  | `npm install -g @openai/codex`                      |
+| [OpenCode](https://github.com/opencode-ai/opencode)           | `go install github.com/opencode-ai/opencode@latest` |
 
 Plus these required tools:
 
@@ -205,6 +205,7 @@ sweteam> /create myrepo
 ```
 
 This will:
+
 - Resolve `myrepo` to your GitHub username (e.g. `YourName/myrepo`)
 - Clone the repo (or fetch latest if already cloned)
 - Create a working branch
@@ -305,32 +306,32 @@ Attaching to live build output... (press Enter to detach)
 
 ### Top-level commands
 
-| Command | Description |
-|---|---|
-| `sweteam` | Launch interactive REPL |
-| `sweteam init` | Auto-discover CLIs and generate config |
-| `sweteam create [repo]` | Create a new session |
-| `sweteam list` | List all sessions |
-| `sweteam enter <session_id>` | Re-enter an existing session |
-| `sweteam show <session_id>` | Show detailed session status |
-| `sweteam stop <session_id>` | Stop a session |
-| `sweteam delete <session_id>` | Delete a session |
+| Command                       | Description                            |
+| ----------------------------- | -------------------------------------- |
+| `sweteam`                     | Launch interactive REPL                |
+| `sweteam init`                | Auto-discover CLIs and generate config |
+| `sweteam create [repo]`       | Create a new session                   |
+| `sweteam list`                | List all sessions                      |
+| `sweteam enter <session_id>`  | Re-enter an existing session           |
+| `sweteam show <session_id>`   | Show detailed session status           |
+| `sweteam stop <session_id>`   | Stop a session                         |
+| `sweteam delete <session_id>` | Delete a session                       |
 
 ### In-session commands
 
 Once inside a session, use `@` commands:
 
-| Command | Description |
-|---|---|
-| `@build` | Finalize plan and start autonomous coding |
-| `@status` | Show task progress dashboard |
-| `@plan` | Re-display the current plan |
+| Command            | Description                                              |
+| ------------------ | -------------------------------------------------------- |
+| `@build`           | Finalize plan and start autonomous coding                |
+| `@status`          | Show task progress dashboard                             |
+| `@plan`            | Re-display the current plan                              |
 | `@feedback <text>` | Give feedback on completed work (triggers new iteration) |
-| `@diff` | Show cumulative diff |
-| `@pr` | Show the PR link |
-| `@tasks` | List all tasks with statuses and review info |
-| `@stop` | Stop this session and return to REPL |
-| `@help` | Show available commands |
+| `@diff`            | Show cumulative diff                                     |
+| `@pr`              | Show the PR link                                         |
+| `@tasks`           | List all tasks with statuses and review info             |
+| `@stop`            | Stop this session and return to REPL                     |
+| `@help`            | Show available commands                                  |
 
 Any other text is sent directly to the planner for conversation.
 
@@ -338,17 +339,17 @@ Any other text is sent directly to the planner for conversation.
 
 Inside the interactive REPL, use `/` commands:
 
-| Command | Description |
-|---|---|
-| `/create [repo]` | Start a new session |
-| `/list` | See all sessions |
-| `/enter <id>` | Resume a session |
-| `/show <id>` | Inspect a session |
-| `/stop <id>` | Stop a session |
-| `/delete <id>` | Delete a session |
-| `/init` | Re-run CLI discovery |
-| `/help` | Show help |
-| `/exit` | Quit |
+| Command          | Description          |
+| ---------------- | -------------------- |
+| `/create [repo]` | Start a new session  |
+| `/list`          | See all sessions     |
+| `/enter <id>`    | Resume a session     |
+| `/show <id>`     | Inspect a session    |
+| `/stop <id>`     | Stop a session       |
+| `/delete <id>`   | Delete a session     |
+| `/init`          | Re-run CLI discovery |
+| `/help`          | Show help            |
+| `/exit`          | Quit                 |
 
 ### CLI flags
 
@@ -551,17 +552,17 @@ src/
 
 ### Tech stack
 
-| Component | Choice |
-|---|---|
-| Language | TypeScript (ESM, Node.js 18+) |
-| ORM | Drizzle |
-| Database | SQLite via better-sqlite3 |
-| CLI framework | Commander.js |
-| Terminal UI | Custom (chalk, raw-mode prompt) |
-| Git | `git` + `gh` CLI (child process) |
-| IDs | nanoid |
-| Config | TOML |
-| Tests | Vitest |
+| Component     | Choice                           |
+| ------------- | -------------------------------- |
+| Language      | TypeScript (ESM, Node.js 18+)    |
+| ORM           | Drizzle                          |
+| Database      | SQLite via better-sqlite3        |
+| CLI framework | Commander.js                     |
+| Terminal UI   | Custom (chalk, raw-mode prompt)  |
+| Git           | `git` + `gh` CLI (child process) |
+| IDs           | nanoid                           |
+| Config        | TOML                             |
+| Tests         | Vitest                           |
 
 ## Contributing
 

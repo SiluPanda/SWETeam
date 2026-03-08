@@ -1,10 +1,10 @@
-import { eq } from "drizzle-orm";
-import { getDb } from "../db/client.js";
-import { tasks } from "../db/schema.js";
-import { git, createBranch, getDiff, getStagedDiff, commitAll } from "../git/git.js";
-import { resolveAdapter } from "../adapters/adapter.js";
-import { loadConfig } from "../config/loader.js";
-import { displayTaskId } from "./orchestrator.js";
+import { eq } from 'drizzle-orm';
+import { getDb } from '../db/client.js';
+import { tasks } from '../db/schema.js';
+import { git, createBranch, getDiff, getStagedDiff, commitAll } from '../git/git.js';
+import { resolveAdapter } from '../adapters/adapter.js';
+import { loadConfig } from '../config/loader.js';
+import { displayTaskId } from './orchestrator.js';
 
 export interface TaskRecord {
   id: string;
@@ -19,24 +19,19 @@ export interface TaskRecord {
   diffPatch?: string | null;
 }
 
-export function buildCoderPrompt(
-  task: TaskRecord,
-  dependencyDiffs: string[],
-): string {
+export function buildCoderPrompt(task: TaskRecord, dependencyDiffs: string[]): string {
   const files = task.filesLikelyTouched
-    ? JSON.parse(task.filesLikelyTouched).join("\n")
-    : "(not specified)";
+    ? JSON.parse(task.filesLikelyTouched).join('\n')
+    : '(not specified)';
 
   const criteria = task.acceptanceCriteria
     ? JSON.parse(task.acceptanceCriteria)
         .map((c: string) => `- ${c}`)
-        .join("\n")
-    : "(none specified)";
+        .join('\n')
+    : '(none specified)';
 
   const contextDiffs =
-    dependencyDiffs.length > 0
-      ? dependencyDiffs.join("\n\n---\n\n")
-      : "(no prior tasks)";
+    dependencyDiffs.length > 0 ? dependencyDiffs.join('\n\n---\n\n') : '(no prior tasks)';
 
   return `You are implementing a specific task in a larger project.
 
@@ -97,8 +92,11 @@ export async function runTask(
   // Session branch is "sw/s_ID" so task branch must NOT nest under it
   // (git forbids both refs/heads/sw/X and refs/heads/sw/X/Y).
   // e.g. "s_UclHjgC1:1" → "sw/s_UclHjgC1-1-add-cachetools-dependency"
-  const safeBranchId = task.id.replace(/:/g, "-").replace(/[^a-zA-Z0-9/_-]/g, "");
-  const branchName = `sw/${safeBranchId}-${task.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30)}`;
+  const safeBranchId = task.id.replace(/:/g, '-').replace(/[^a-zA-Z0-9/_-]/g, '');
+  const branchName = `sw/${safeBranchId}-${task.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .slice(0, 30)}`;
 
   if (!options?.worktreePath) {
     createBranch(branchName, sessionBranch, repoPath);
@@ -107,7 +105,7 @@ export async function runTask(
   // Update task in DB
   db.update(tasks)
     .set({
-      status: "running",
+      status: 'running',
       branchName,
       updatedAt: new Date(),
     })
@@ -133,20 +131,20 @@ export async function runTask(
     // Commit any uncommitted changes the coder left behind (staged, unstaged, or untracked)
     const hasUnstaged = getDiff(cwd).length > 0;
     const hasStaged = getStagedDiff(cwd).length > 0;
-    const hasUntracked = git(["ls-files", "--others", "--exclude-standard"], cwd).length > 0;
+    const hasUntracked = git(['ls-files', '--others', '--exclude-standard'], cwd).length > 0;
     if (hasUnstaged || hasStaged || hasUntracked) {
       commitAll(`feat(${displayTaskId(task.id)}): ${task.title}`, cwd);
     }
 
     // Capture the full diff of this task branch vs the session branch
-    const diff = git(["diff", `${sessionBranch}...HEAD`], cwd);
+    const diff = git(['diff', `${sessionBranch}...HEAD`], cwd);
 
     // Update DB with results
     db.update(tasks)
       .set({
         agentOutput: result.output,
         diffPatch: diff || null,
-        status: "reviewing",
+        status: 'reviewing',
         updatedAt: new Date(),
       })
       .where(eq(tasks.id, task.id))
@@ -158,13 +156,13 @@ export async function runTask(
 
     db.update(tasks)
       .set({
-        status: "failed",
+        status: 'failed',
         agentOutput: `Error: ${message}`,
         updatedAt: new Date(),
       })
       .where(eq(tasks.id, task.id))
       .run();
 
-    return { success: false, output: message, diff: "" };
+    return { success: false, output: message, diff: '' };
   }
 }

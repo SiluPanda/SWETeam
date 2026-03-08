@@ -1,15 +1,15 @@
-import { readFileSync, existsSync } from "fs";
-import { join } from "path";
-import { homedir } from "os";
-import { parse as parseTOML, stringify as stringifyTOML } from "@iarna/toml";
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
+import { parse as parseTOML, stringify as stringifyTOML } from '@iarna/toml';
 
-const CONFIG_PATH = join(homedir(), ".sweteam", "config.toml");
+const CONFIG_PATH = join(homedir(), '.sweteam', 'config.toml');
 
 export interface AgentConfig {
   command: string;
   args?: string[];
-  prompt_via?: "stdin" | "arg" | "file";
-  output_from?: "stdout" | "file";
+  prompt_via?: 'stdin' | 'arg' | 'file';
+  output_from?: 'stdout' | 'file';
 }
 
 export interface SweteamConfig {
@@ -24,7 +24,7 @@ export interface SweteamConfig {
     branch_prefix: string;
   };
   git: {
-    commit_style: "conventional" | "simple";
+    commit_style: 'conventional' | 'simple';
     squash_on_merge: boolean;
   };
   agents: Record<string, AgentConfig>;
@@ -32,23 +32,23 @@ export interface SweteamConfig {
 
 const DEFAULT_CONFIG: SweteamConfig = {
   roles: {
-    planner: "claude-code",
-    coder: "claude-code",
-    reviewer: "claude-code",
+    planner: 'claude-code',
+    coder: 'claude-code',
+    reviewer: 'claude-code',
   },
   execution: {
     max_parallel: 3,
     max_review_cycles: 3,
-    branch_prefix: "sw/",
+    branch_prefix: 'sw/',
   },
   git: {
-    commit_style: "conventional",
+    commit_style: 'conventional',
     squash_on_merge: true,
   },
   agents: {
-    "claude-code": {
-      command: "claude",
-      args: ["-p"],
+    'claude-code': {
+      command: 'claude',
+      args: ['-p'],
     },
   },
 };
@@ -80,13 +80,13 @@ export function loadConfig(configPath?: string): SweteamConfig {
       agents: { ...DEFAULT_CONFIG.agents },
     };
   } else {
-    const raw = readFileSync(effectivePath, "utf-8");
+    const raw = readFileSync(effectivePath, 'utf-8');
     let parsed: Partial<SweteamConfig>;
     try {
       parsed = parseTOML(raw) as unknown as Partial<SweteamConfig>;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      throw new Error(`Failed to parse config at ${effectivePath}: ${msg}`);
+      throw new Error(`Failed to parse config at ${effectivePath}: ${msg}`, { cause: err });
     }
 
     config = {

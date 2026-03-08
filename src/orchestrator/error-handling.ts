@@ -1,11 +1,10 @@
-import { eq } from "drizzle-orm";
-import { getDb } from "../db/client.js";
-import { tasks as tasksTable } from "../db/schema.js";
-import { addMessage } from "../session/manager.js";
-import { resolveAdapter } from "../adapters/adapter.js";
-import { loadConfig } from "../config/loader.js";
-import { git } from "../git/git.js";
-import type { TaskRecord } from "./task-runner.js";
+import { eq } from 'drizzle-orm';
+import { getDb } from '../db/client.js';
+import { tasks as tasksTable } from '../db/schema.js';
+import { addMessage } from '../session/manager.js';
+import { resolveAdapter } from '../adapters/adapter.js';
+import { git } from '../git/git.js';
+import type { TaskRecord } from './task-runner.js';
 
 export async function executeWithRetry(
   adapter: ReturnType<typeof resolveAdapter>,
@@ -27,7 +26,7 @@ export async function executeWithRetry(
       // First failure — retry with error context
       addMessage(
         sessionId,
-        "system",
+        'system',
         `Task ${taskId}: agent exited with code ${result.exitCode}, retrying with error context...`,
       );
 
@@ -42,7 +41,7 @@ export async function executeWithRetry(
       if (retryResult.exitCode !== 0) {
         addMessage(
           sessionId,
-          "system",
+          'system',
           `Task ${taskId}: retry also failed (exit code ${retryResult.exitCode})`,
         );
       }
@@ -55,10 +54,10 @@ export async function executeWithRetry(
     const message = err instanceof Error ? err.message : String(err);
 
     // Check if timeout
-    if (message.includes("timed out")) {
+    if (message.includes('timed out')) {
       addMessage(
         sessionId,
-        "system",
+        'system',
         `Task ${taskId}: timed out after ${timeout}ms, retrying once...`,
       );
 
@@ -66,13 +65,8 @@ export async function executeWithRetry(
         const retryResult = await adapter.execute({ ...opts, timeout });
         return retryResult;
       } catch (retryErr) {
-        const retryMsg =
-          retryErr instanceof Error ? retryErr.message : String(retryErr);
-        addMessage(
-          sessionId,
-          "system",
-          `Task ${taskId}: retry also timed out: ${retryMsg}`,
-        );
+        const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
+        addMessage(sessionId, 'system', `Task ${taskId}: retry also timed out: ${retryMsg}`);
         throw retryErr;
       }
     }
@@ -94,22 +88,18 @@ export function propagateFailure(
   const blocked: string[] = [];
 
   for (const task of allTasks) {
-    if (task.status !== "queued") continue;
+    if (task.status !== 'queued') continue;
     if (!task.dependsOn) continue;
 
     const deps: string[] = JSON.parse(task.dependsOn);
     if (deps.includes(failedTaskId)) {
       db.update(tasksTable)
-        .set({ status: "blocked", updatedAt: new Date() })
+        .set({ status: 'blocked', updatedAt: new Date() })
         .where(eq(tasksTable.id, task.id))
         .run();
 
       blocked.push(task.id);
-      addMessage(
-        sessionId,
-        "system",
-        `Task ${task.id} blocked: dependency ${failedTaskId} failed`,
-      );
+      addMessage(sessionId, 'system', `Task ${task.id} blocked: dependency ${failedTaskId} failed`);
 
       // Recursively block downstream
       blocked.push(...propagateFailure(task.id, sessionId, allTasks));
@@ -126,30 +116,26 @@ export function attemptMergeConflictResolution(
 ): boolean {
   try {
     // Check for conflicts
-    const status = git(["status", "--porcelain"], repoPath);
+    const status = git(['status', '--porcelain'], repoPath);
     const hasConflicts = status
-      .split("\n")
-      .some((line) => line.startsWith("UU") || line.startsWith("AA"));
+      .split('\n')
+      .some((line) => line.startsWith('UU') || line.startsWith('AA'));
 
     if (!hasConflicts) return true;
 
     addMessage(
       sessionId,
-      "system",
+      'system',
       `Task ${taskId}: merge conflict detected, attempting auto-resolution...`,
     );
 
     // Try to resolve by accepting the incoming changes
     try {
-      git(["checkout", "--theirs", "."], repoPath);
-      git(["add", "-A"], repoPath);
+      git(['checkout', '--theirs', '.'], repoPath);
+      git(['add', '-A'], repoPath);
       return true;
     } catch {
-      addMessage(
-        sessionId,
-        "system",
-        `Task ${taskId}: auto-resolution failed, escalating`,
-      );
+      addMessage(sessionId, 'system', `Task ${taskId}: auto-resolution failed, escalating`);
       return false;
     }
   } catch {
@@ -158,13 +144,25 @@ export function attemptMergeConflictResolution(
 }
 
 const ERROR_PATTERNS: Array<[RegExp, string]> = [
-  [/ENOENT.*spawn/i, "Command not found. Check that the CLI adapter is installed and on your PATH."],
-  [/EACCES/i, "Permission denied. Check file/directory permissions or run with appropriate access."],
-  [/authentication|auth.*fail|401|403/i, "Authentication failed. Run `gh auth status` or check your API token."],
-  [/TOML|parse error|Expected/i, "Config parse error. Check your sweteam.toml for syntax issues."],
-  [/rate.?limit|429|too many requests/i, "Rate limited by the API. Wait a moment and try again."],
-  [/ECONNREFUSED|ENOTFOUND|network/i, "Network error. Check your internet connection."],
-  [/timed?\s*out/i, "Operation timed out. The task may be too large — try breaking it into smaller steps."],
+  [
+    /ENOENT.*spawn/i,
+    'Command not found. Check that the CLI adapter is installed and on your PATH.',
+  ],
+  [
+    /EACCES/i,
+    'Permission denied. Check file/directory permissions or run with appropriate access.',
+  ],
+  [
+    /authentication|auth.*fail|401|403/i,
+    'Authentication failed. Run `gh auth status` or check your API token.',
+  ],
+  [/TOML|parse error|Expected/i, 'Config parse error. Check your sweteam.toml for syntax issues.'],
+  [/rate.?limit|429|too many requests/i, 'Rate limited by the API. Wait a moment and try again.'],
+  [/ECONNREFUSED|ENOTFOUND|network/i, 'Network error. Check your internet connection.'],
+  [
+    /timed?\s*out/i,
+    'Operation timed out. The task may be too large — try breaking it into smaller steps.',
+  ],
 ];
 
 export function friendlyError(raw: string): string {
@@ -182,16 +180,12 @@ export function persistError(
   error: string,
   phase: string,
 ): void {
-  addMessage(
-    sessionId,
-    "system",
-    `[${phase}] Task ${taskId} error: ${error}`,
-  );
+  addMessage(sessionId, 'system', `[${phase}] Task ${taskId} error: ${error}`);
 
   const db = getDb();
   db.update(tasksTable)
     .set({
-      status: "failed",
+      status: 'failed',
       agentOutput: `[${phase}] ${error}`,
       updatedAt: new Date(),
     })

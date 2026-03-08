@@ -1,4 +1,4 @@
-import type { TaskRecord } from "./task-runner.js";
+import type { TaskRecord } from './task-runner.js';
 
 export interface DagNode {
   id: string;

@@ -1,26 +1,34 @@
-import type { ChildProcess } from "child_process";
-import { closeDb } from "./db/client.js";
+import type { ChildProcess } from 'child_process';
+import { closeDb } from './db/client.js';
 
 /** Track spawned child processes for cleanup on shutdown. */
 const activeProcesses = new Map<ChildProcess, string | undefined>();
 
 export function trackProcess(proc: ChildProcess, sessionId?: string): void {
   activeProcesses.set(proc, sessionId);
-  proc.on("close", () => activeProcesses.delete(proc));
-  proc.on("error", () => activeProcesses.delete(proc));
+  proc.on('close', () => activeProcesses.delete(proc));
+  proc.on('error', () => activeProcesses.delete(proc));
 }
 
 /** Kill processes belonging to a specific session, or all if no sessionId given. */
 export function killSessionProcesses(sessionId: string): void {
   for (const [proc, sid] of activeProcesses) {
     if (sid === sessionId) {
-      try { proc.kill("SIGTERM"); } catch { /* already exited */ }
+      try {
+        proc.kill('SIGTERM');
+      } catch {
+        /* already exited */
+      }
     }
   }
   setTimeout(() => {
     for (const [proc, sid] of activeProcesses) {
       if (sid === sessionId) {
-        try { proc.kill("SIGKILL"); } catch { /* already dead */ }
+        try {
+          proc.kill('SIGKILL');
+        } catch {
+          /* already dead */
+        }
       }
     }
   }, 2000);
@@ -29,7 +37,7 @@ export function killSessionProcesses(sessionId: string): void {
 export function killAllProcesses(): void {
   for (const proc of activeProcesses.keys()) {
     try {
-      proc.kill("SIGTERM");
+      proc.kill('SIGTERM');
     } catch {
       // Process may have already exited
     }
@@ -38,7 +46,7 @@ export function killAllProcesses(): void {
   setTimeout(() => {
     for (const proc of activeProcesses.keys()) {
       try {
-        proc.kill("SIGKILL");
+        proc.kill('SIGKILL');
       } catch {
         // Already dead
       }
@@ -71,15 +79,15 @@ function handleShutdown(signal: string): void {
 }
 
 export function installShutdownHandlers(): void {
-  process.on("SIGINT", () => handleShutdown("SIGINT"));
-  process.on("SIGTERM", () => handleShutdown("SIGTERM"));
+  process.on('SIGINT', () => handleShutdown('SIGINT'));
+  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
 
-  process.on("unhandledRejection", (reason) => {
-    console.error("Unhandled promise rejection:", reason);
+  process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled promise rejection:', reason);
   });
 
-  process.on("uncaughtException", (err) => {
-    console.error("Uncaught exception:", err.message);
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught exception:', err.message);
     killAllProcesses();
     closeDb();
     process.exit(1);

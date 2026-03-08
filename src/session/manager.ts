@@ -1,12 +1,19 @@
-import { nanoid } from "nanoid";
-import { eq, sql } from "drizzle-orm";
-import { join } from "path";
-import { unlinkSync } from "fs";
-import { getDb, SWETEAM_DIR } from "../db/client.js";
-import { sessions, messages, tasks as tasksTable } from "../db/schema.js";
-import { resolveRepo, cloneOrLocateRepo, createBranch, deleteBranches, getDefaultBranch, git } from "../git/git.js";
-import { loadConfig } from "../config/loader.js";
-import { killAllProcesses, killSessionProcesses } from "../lifecycle.js";
+import { nanoid } from 'nanoid';
+import { eq, sql } from 'drizzle-orm';
+import { join } from 'path';
+import { unlinkSync } from 'fs';
+import { getDb, SWETEAM_DIR } from '../db/client.js';
+import { sessions, messages, tasks as tasksTable } from '../db/schema.js';
+import {
+  resolveRepo,
+  cloneOrLocateRepo,
+  createBranch,
+  deleteBranches,
+  getDefaultBranch,
+  git,
+} from '../git/git.js';
+import { loadConfig } from '../config/loader.js';
+import { killSessionProcesses } from '../lifecycle.js';
 
 function generateSessionId(): string {
   return `s_${nanoid(8)}`;
@@ -15,8 +22,8 @@ function generateSessionId(): string {
 function slugify(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
     .slice(0, 30);
 }
 
@@ -38,7 +45,7 @@ export async function createSession(
   if (opts.local) {
     // Local workspace — repoInput is an absolute path
     repoLocalPath = opts.repoInput;
-    const { repoFromRemote } = await import("../git/git.js");
+    const { repoFromRemote } = await import('../git/git.js');
     repo = repoFromRemote(repoLocalPath) ?? repoLocalPath;
   } else {
     repo = resolveRepo(opts.repoInput);
@@ -46,15 +53,19 @@ export async function createSession(
   }
 
   const sessionId = generateSessionId();
-  const goal = opts.goal ?? "";
-  const slug = goal ? slugify(goal) : "";
+  const goal = opts.goal ?? '';
+  const slug = goal ? slugify(goal) : '';
   const workingBranch = slug
     ? `${config.execution.branch_prefix}${sessionId}-${slug}`
     : `${config.execution.branch_prefix}${sessionId}`;
 
   // Branch from the default branch (not HEAD, which may be a stale feature branch)
   const baseBranch = getDefaultBranch(repoLocalPath);
-  try { git(["checkout", baseBranch], repoLocalPath); } catch { /* may already be on it */ }
+  try {
+    git(['checkout', baseBranch], repoLocalPath);
+  } catch {
+    /* may already be on it */
+  }
   createBranch(workingBranch, baseBranch, repoLocalPath);
 
   const db = getDb();
@@ -66,7 +77,7 @@ export async function createSession(
       repo,
       repoLocalPath,
       goal,
-      status: "planning",
+      status: 'planning',
       workingBranch,
       createdAt: now,
       updatedAt: now,
@@ -77,9 +88,9 @@ export async function createSession(
     .values({
       id: nanoid(),
       sessionId,
-      role: "system",
+      role: 'system',
       content: `Session created for ${repo}`,
-      metadata: JSON.stringify({ phase: "planning" }),
+      metadata: JSON.stringify({ phase: 'planning' }),
       createdAt: now,
     })
     .run();
@@ -89,11 +100,7 @@ export async function createSession(
 
 export function getSession(id: string) {
   const db = getDb();
-  const rows = db
-    .select()
-    .from(sessions)
-    .where(eq(sessions.id, id))
-    .all();
+  const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
 
   if (rows.length === 0) {
     return null;
@@ -165,7 +172,7 @@ export function listSessionsEnriched(): EnrichedSession[] {
       .where(eq(tasksTable.sessionId, s.id))
       .all();
     const tasksTotal = taskRows.length;
-    const tasksDone = taskRows.filter((t) => t.status === "done").length;
+    const tasksDone = taskRows.filter((t) => t.status === 'done').length;
 
     return {
       id: s.id,
@@ -193,7 +200,7 @@ export function stopSession(id: string): void {
 
   const now = new Date();
   db.update(sessions)
-    .set({ status: "stopped", stoppedAt: now, updatedAt: now })
+    .set({ status: 'stopped', stoppedAt: now, updatedAt: now })
     .where(eq(sessions.id, id))
     .run();
 
@@ -209,18 +216,18 @@ export function deleteSession(id: string): void {
   }
 
   // Stop any active build processes before deleting
-  if (session.status === "building" || session.status === "iterating") {
+  if (session.status === 'building' || session.status === 'iterating') {
     killSessionProcesses(id);
   }
 
   // Clean up git branches associated with this session
   const config = loadConfig();
-  const prefix = config.execution.branch_prefix ?? "sw/";
+  const prefix = config.execution.branch_prefix ?? 'sw/';
   if (session.repoLocalPath) {
     try {
       // Switch to default branch first so session branch isn't checked out
       const defaultBranch = getDefaultBranch(session.repoLocalPath);
-      git(["checkout", defaultBranch], session.repoLocalPath);
+      git(['checkout', defaultBranch], session.repoLocalPath);
     } catch {
       // May already be on default branch or repo may be gone
     }
@@ -234,7 +241,7 @@ export function deleteSession(id: string): void {
 
   // Clean up agent log files
   try {
-    const logPath = join(SWETEAM_DIR, "logs", `${id}.jsonl`);
+    const logPath = join(SWETEAM_DIR, 'logs', `${id}.jsonl`);
     unlinkSync(logPath);
   } catch {
     // Log file may not exist
@@ -245,7 +252,7 @@ export function deleteSession(id: string): void {
 
 export function addMessage(
   sessionId: string,
-  role: "user" | "agent" | "system",
+  role: 'user' | 'agent' | 'system',
   content: string,
   metadata?: Record<string, unknown>,
 ): string {

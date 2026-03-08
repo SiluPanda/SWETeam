@@ -4,27 +4,27 @@
 
 /** Patterns that indicate the CLI is prompting for input. */
 const PROMPT_PATTERNS = [
-  /\?\s*$/,                    // "Do you want to continue? "
-  /\(y\/n\)\s*:?\s*$/i,       // "(y/n)" or "(y/n):"
-  /\[yes\/no\]\s*:?\s*$/i,    // "[yes/no]:"
-  /\[y\/N\]\s*:?\s*$/i,       // "[y/N]"
-  /\[Y\/n\]\s*:?\s*$/i,       // "[Y/n]"
-  /\(yes\/no\)\s*:?\s*$/i,    // "(yes/no):"
-  /continue\?\s*$/i,           // "Do you want to continue?"
-  /proceed\?\s*$/i,            // "Do you want to proceed?"
-  /overwrite\?\s*$/i,          // "Overwrite?"
+  /\?\s*$/, // "Do you want to continue? "
+  /\(y\/n\)\s*:?\s*$/i, // "(y/n)" or "(y/n):"
+  /\[yes\/no\]\s*:?\s*$/i, // "[yes/no]:"
+  /\[y\/N\]\s*:?\s*$/i, // "[y/N]"
+  /\[Y\/n\]\s*:?\s*$/i, // "[Y/n]"
+  /\(yes\/no\)\s*:?\s*$/i, // "(yes/no):"
+  /continue\?\s*$/i, // "Do you want to continue?"
+  /proceed\?\s*$/i, // "Do you want to proceed?"
+  /overwrite\?\s*$/i, // "Overwrite?"
 ];
 
 /** Patterns that are false positives — output that ends with prompt-like chars but isn't a prompt. */
 const FALSE_POSITIVE_PATTERNS = [
-  /^#+\s/m,                    // markdown heading "# ..."
-  /^\s*\/\//m,                 // code comment "// ..."
-  /```/,                       // inside a code block
-  /https?:\/\//,               // URL
-  /^\s*\d+\.\s/m,              // numbered list item
-  /^\s*-\s/m,                  // bulleted list
-  /[{}\[\],;]/,                // JSON/code syntax
-  /^\s{4,}/,                   // indented code (4+ spaces)
+  /^#+\s/m, // markdown heading "# ..."
+  /^\s*\/\//m, // code comment "// ..."
+  /```/, // inside a code block
+  /https?:\/\//, // URL
+  /^\s*\d+\.\s/m, // numbered list item
+  /^\s*-\s/m, // bulleted list
+  /[{}[\],;]/, // JSON/code syntax
+  /^\s{4,}/, // indented code (4+ spaces)
 ];
 
 /**
@@ -36,7 +36,7 @@ export function detectInputPrompt(recentOutput: string): boolean {
   if (!trimmed) return false;
 
   // Get the last line
-  const lines = trimmed.split("\n");
+  const lines = trimmed.split('\n');
   const lastLine = lines[lines.length - 1];
 
   // Skip if the last line is clearly not a prompt
@@ -61,9 +61,9 @@ export function detectInputPrompt(recentOutput: string): boolean {
  */
 export function extractPromptText(recentOutput: string): string {
   const trimmed = recentOutput.trimEnd();
-  const lines = trimmed.split("\n").filter((l) => l.trim().length > 0);
+  const lines = trimmed.split('\n').filter((l) => l.trim().length > 0);
 
-  if (lines.length === 0) return "";
+  if (lines.length === 0) return '';
 
   // Take the last line as the prompt, but include the preceding line
   // if it looks like it's part of the question (e.g. multi-line prompt)

@@ -1,12 +1,12 @@
-import { mkdirSync, writeFileSync, existsSync } from "fs";
-import { dirname } from "path";
-import { discoverClis, getDiscoveredAgents } from "../config/discovery.js";
+import { mkdirSync, writeFileSync, existsSync } from 'fs';
+import { dirname } from 'path';
+import { discoverClis, getDiscoveredAgents } from '../config/discovery.js';
 import {
   CONFIG_PATH,
   DEFAULT_CONFIG,
   stringifyTOML,
   type SweteamConfig,
-} from "../config/loader.js";
+} from '../config/loader.js';
 
 export interface InitResult {
   configPath: string;
@@ -21,7 +21,7 @@ export function runInit(
   const clis = discoverClis();
   const agents = getDiscoveredAgents(clis);
 
-  const firstAgent = Object.keys(agents)[0] || "claude-code";
+  const firstAgent = Object.keys(agents)[0] || 'claude-code';
 
   const config: SweteamConfig = {
     ...DEFAULT_CONFIG,
@@ -36,7 +36,8 @@ export function runInit(
   let configWritten = false;
   if (!existsSync(configPath) || opts.force) {
     mkdirSync(dirname(configPath), { recursive: true });
-    writeFileSync(configPath, stringifyTOML(config as any), "utf-8");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    writeFileSync(configPath, stringifyTOML(config as any), 'utf-8');
     configWritten = true;
   }
 
@@ -55,11 +56,9 @@ export function formatInitOutput(result: InitResult): string {
   const lines: string[] = [];
 
   for (const cli of result.clis) {
-    const icon = cli.available ? "\u2713" : "\u2717";
-    const version = cli.version ? ` (${cli.version})` : "";
-    const status = cli.available
-      ? `Found ${cli.name}${version}`
-      : `${cli.name} not found`;
+    const icon = cli.available ? '\u2713' : '\u2717';
+    const version = cli.version ? ` (${cli.version})` : '';
+    const status = cli.available ? `Found ${cli.name}${version}` : `${cli.name} not found`;
     lines.push(`${icon} ${status}`);
   }
 
@@ -69,5 +68,5 @@ export function formatInitOutput(result: InitResult): string {
     lines.push(`Config already exists at ${result.configPath}`);
   }
 
-  return lines.join("\n");
+  return lines.join('\n');
 }

@@ -1,5 +1,5 @@
-import chalk from "chalk";
-import { createInterface } from "readline";
+import chalk from 'chalk';
+import { createInterface } from 'readline';
 
 /**
  * Interactive prompt with dropdown autocomplete and ghost-text.
@@ -18,7 +18,7 @@ import { createInterface } from "readline";
  */
 
 /** Sentinel value returned by promptLine when the user presses Escape to back out. */
-export const ESCAPE_SIGNAL = "\x1b__ESCAPE__";
+export const ESCAPE_SIGNAL = '\x1b__ESCAPE__';
 
 export interface PromptOptions {
   prompt: string;
@@ -30,7 +30,7 @@ export function promptLine(opts: PromptOptions): Promise<string> {
   const { prompt, getCompletions } = opts;
 
   return new Promise<string>((resolve) => {
-    let input = "";
+    let input = '';
     let cursor = 0;
     let suggestions: string[] = [];
     let selectedIndex = 0;
@@ -42,7 +42,7 @@ export function promptLine(opts: PromptOptions): Promise<string> {
       if (dropdownRows > 0) {
         // Move below the prompt line and clear each dropdown row
         for (let i = 0; i < dropdownRows; i++) {
-          process.stdout.write("\n\x1b[2K");
+          process.stdout.write('\n\x1b[2K');
         }
         // Move back up to the prompt line
         process.stdout.write(`\x1b[${dropdownRows}A`);
@@ -70,19 +70,13 @@ export function promptLine(opts: PromptOptions): Promise<string> {
         for (let i = 0; i < maxVisible; i++) {
           const item = suggestions[i];
           if (i === selectedIndex) {
-            process.stdout.write(
-              "\n" + chalk.bgBlue.white(` ${item} `),
-            );
+            process.stdout.write('\n' + chalk.bgBlue.white(` ${item} `));
           } else {
-            process.stdout.write(
-              "\n " + chalk.dim(item) + " ",
-            );
+            process.stdout.write('\n ' + chalk.dim(item) + ' ');
           }
         }
         if (suggestions.length > maxVisible) {
-          process.stdout.write(
-            "\n " + chalk.dim(`… ${suggestions.length - maxVisible} more`),
-          );
+          process.stdout.write('\n ' + chalk.dim(`… ${suggestions.length - maxVisible} more`));
           dropdownRows = maxVisible + 1;
         } else {
           dropdownRows = maxVisible;
@@ -112,7 +106,7 @@ export function promptLine(opts: PromptOptions): Promise<string> {
       }
       if (process.stdin.isTTY) process.stdin.setRawMode(false);
       process.stdin.pause();
-      process.stdin.removeListener("data", onData);
+      process.stdin.removeListener('data', onData);
       resolve(value);
     }
 
@@ -120,7 +114,7 @@ export function promptLine(opts: PromptOptions): Promise<string> {
 
     function acceptSuggestion() {
       if (suggestions.length > 0) {
-        input = suggestions[selectedIndex] + " ";
+        input = suggestions[selectedIndex] + ' ';
         cursor = input.length;
         refreshSuggestions();
         render();
@@ -128,28 +122,28 @@ export function promptLine(opts: PromptOptions): Promise<string> {
     }
 
     function onData(raw: Buffer) {
-      const seq = raw.toString("utf8");
+      const seq = raw.toString('utf8');
 
       // ── Enter: submit ──
-      if (seq === "\r" || seq === "\n") {
+      if (seq === '\r' || seq === '\n') {
         finish(input);
         return;
       }
 
       // ── Ctrl-C / Ctrl-D ──
-      if (seq === "\x03" || seq === "\x04") {
-        finish("");
+      if (seq === '\x03' || seq === '\x04') {
+        finish('');
         return;
       }
 
       // ── Tab: accept suggestion ──
-      if (seq === "\t") {
+      if (seq === '\t') {
         acceptSuggestion();
         return;
       }
 
       // ── Right arrow ──
-      if (seq === "\x1b[C") {
+      if (seq === '\x1b[C') {
         if (cursor === input.length && suggestions.length > 0) {
           // At end of input: accept one ghost character (fish-style)
           const match = suggestions[selectedIndex];
@@ -167,7 +161,7 @@ export function promptLine(opts: PromptOptions): Promise<string> {
       }
 
       // ── Left arrow ──
-      if (seq === "\x1b[D") {
+      if (seq === '\x1b[D') {
         if (cursor > 0) {
           cursor--;
           render();
@@ -176,7 +170,7 @@ export function promptLine(opts: PromptOptions): Promise<string> {
       }
 
       // ── Down arrow: move selection down ──
-      if (seq === "\x1b[B") {
+      if (seq === '\x1b[B') {
         if (suggestions.length > 0) {
           selectedIndex = (selectedIndex + 1) % suggestions.length;
           render();
@@ -185,28 +179,27 @@ export function promptLine(opts: PromptOptions): Promise<string> {
       }
 
       // ── Up arrow: move selection up ──
-      if (seq === "\x1b[A") {
+      if (seq === '\x1b[A') {
         if (suggestions.length > 0) {
-          selectedIndex =
-            (selectedIndex - 1 + suggestions.length) % suggestions.length;
+          selectedIndex = (selectedIndex - 1 + suggestions.length) % suggestions.length;
           render();
         }
         return;
       }
 
       // ── Escape: dismiss dropdown, or back out if nothing to dismiss ──
-      if (seq === "\x1b") {
+      if (seq === '\x1b') {
         if (suggestions.length > 0) {
           // Dropdown is open — just dismiss it
           suggestions = [];
           selectedIndex = 0;
           render();
-        } else if (input === "") {
+        } else if (input === '') {
           // Nothing typed, no dropdown — signal "back out"
           finish(ESCAPE_SIGNAL);
         } else {
           // Has typed text — clear the input first
-          input = "";
+          input = '';
           cursor = 0;
           refreshSuggestions();
           render();
@@ -215,7 +208,7 @@ export function promptLine(opts: PromptOptions): Promise<string> {
       }
 
       // ── Backspace ──
-      if (seq === "\x7f" || seq === "\b") {
+      if (seq === '\x7f' || seq === '\b') {
         if (cursor > 0) {
           input = input.slice(0, cursor - 1) + input.slice(cursor);
           cursor--;
@@ -226,7 +219,7 @@ export function promptLine(opts: PromptOptions): Promise<string> {
       }
 
       // ── Ignore other escape / control sequences ──
-      if (seq.startsWith("\x1b") || seq.charCodeAt(0) < 32) {
+      if (seq.startsWith('\x1b') || seq.charCodeAt(0) < 32) {
         return;
       }
 
@@ -245,17 +238,17 @@ export function promptLine(opts: PromptOptions): Promise<string> {
       // Non-TTY mode (piped input): read line-by-line via readline
       process.stdout.write(prompt);
       const rl = createInterface({ input: process.stdin });
-      rl.once("line", (line) => {
+      rl.once('line', (line) => {
         rl.close();
         resolve(line);
       });
-      rl.once("close", () => resolve(""));
+      rl.once('close', () => resolve(''));
       return;
     }
 
     process.stdin.setRawMode(true);
     process.stdin.resume();
-    process.stdin.on("data", onData);
+    process.stdin.on('data', onData);
     render();
   });
 }

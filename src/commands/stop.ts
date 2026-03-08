@@ -1,4 +1,4 @@
-import { stopSession, getSession } from "../session/manager.js";
+import { stopSession, getSession } from '../session/manager.js';
 
 export async function handleStop(sessionId: string): Promise<void> {
   const session = getSession(sessionId);

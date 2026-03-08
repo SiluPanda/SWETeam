@@ -1,32 +1,29 @@
-import { eq } from "drizzle-orm";
-import { getDb } from "../db/client.js";
-import { tasks } from "../db/schema.js";
-import { squashMerge, git } from "../git/git.js";
-import { resolveAdapter } from "../adapters/adapter.js";
-import { loadConfig } from "../config/loader.js";
-import { displayTaskId } from "./orchestrator.js";
-import type { TaskRecord } from "./task-runner.js";
+import { eq } from 'drizzle-orm';
+import { getDb } from '../db/client.js';
+import { tasks } from '../db/schema.js';
+import { squashMerge, git } from '../git/git.js';
+import { resolveAdapter } from '../adapters/adapter.js';
+import { loadConfig } from '../config/loader.js';
+import { displayTaskId } from './orchestrator.js';
+import type { TaskRecord } from './task-runner.js';
 
 export interface ReviewResult {
-  verdict: "approve" | "request_changes";
+  verdict: 'approve' | 'request_changes';
   issues: Array<{
     file?: string;
     line?: number;
-    severity?: "error" | "warning";
+    severity?: 'error' | 'warning';
     message: string;
   }>;
   summary: string;
 }
 
-export function buildReviewerPrompt(
-  task: TaskRecord,
-  diff: string,
-): string {
+export function buildReviewerPrompt(task: TaskRecord, diff: string): string {
   const criteria = task.acceptanceCriteria
     ? JSON.parse(task.acceptanceCriteria)
         .map((c: string) => `- ${c}`)
-        .join("\n")
-    : "(none specified)";
+        .join('\n')
+    : '(none specified)';
 
   return `You are a senior code reviewer. Review this diff for:
 1. Correctness — does it meet the acceptance criteria?
@@ -60,16 +57,16 @@ export function parseReviewResponse(output: string): ReviewResult {
   try {
     const parsed = JSON.parse(jsonStr.trim());
     return {
-      verdict: parsed.verdict === "approve" ? "approve" : "request_changes",
+      verdict: parsed.verdict === 'approve' ? 'approve' : 'request_changes',
       issues: Array.isArray(parsed.issues) ? parsed.issues : [],
-      summary: String(parsed.summary ?? ""),
+      summary: String(parsed.summary ?? ''),
     };
   } catch {
     // If parsing fails, reject — never auto-approve unreviewed code
     return {
-      verdict: "request_changes",
-      issues: [{ message: "Review response could not be parsed as valid JSON" }],
-      summary: "Review response could not be parsed; requesting changes as a safety measure.",
+      verdict: 'request_changes',
+      issues: [{ message: 'Review response could not be parsed as valid JSON' }],
+      summary: 'Review response could not be parsed; requesting changes as a safety measure.',
     };
   }
 }
@@ -97,11 +94,7 @@ export async function reviewTask(
   return parseReviewResponse(result.output);
 }
 
-export function mergeTask(
-  task: TaskRecord,
-  sessionBranch: string,
-  repoPath: string,
-): void {
+export function mergeTask(task: TaskRecord, sessionBranch: string, repoPath: string): void {
   const db = getDb();
 
   if (!task.branchName) {
@@ -117,7 +110,7 @@ export function mergeTask(
 
   db.update(tasks)
     .set({
-      status: "done",
+      status: 'done',
       updatedAt: new Date(),
     })
     .where(eq(tasks.id, task.id))
@@ -145,7 +138,7 @@ export async function reviewAndMerge(
 
   for (let cycle = 0; cycle < maxCycles; cycle++) {
     // Always get a fresh diff for this review cycle
-    const diff = git(["diff", `${sessionBranch}...${task.branchName}`], repoPath);
+    const diff = git(['diff', `${sessionBranch}...${task.branchName}`], repoPath);
 
     const reviewResult = await reviewTask(task, diff, repoPath, onOutput, onInputNeeded);
 
@@ -160,18 +153,33 @@ export async function reviewAndMerge(
       .where(eq(tasks.id, task.id))
       .run();
 
-    if (reviewResult.verdict === "approve") {
+    if (reviewResult.verdict === 'approve') {
       try {
         await lock(async () => mergeTask(task, sessionBranch, repoPath));
       } catch (mergeErr) {
         const mergeMsg = mergeErr instanceof Error ? mergeErr.message : String(mergeErr);
         // Attempt to abort a failed merge to restore clean state
-        try { git(["merge", "--abort"], repoPath); } catch { /* no merge in progress */ }
+        try {
+          git(['merge', '--abort'], repoPath);
+        } catch {
+          /* no merge in progress */
+        }
         db.update(tasks)
-          .set({ status: "failed", agentOutput: `Merge failed: ${mergeMsg}`, updatedAt: new Date() })
+          .set({
+            status: 'failed',
+            agentOutput: `Merge failed: ${mergeMsg}`,
+            updatedAt: new Date(),
+          })
           .where(eq(tasks.id, task.id))
           .run();
-        return { merged: false, reviewResult: { verdict: "request_changes", issues: [{ message: `Merge failed: ${mergeMsg}` }], summary: mergeMsg } };
+        return {
+          merged: false,
+          reviewResult: {
+            verdict: 'request_changes',
+            issues: [{ message: `Merge failed: ${mergeMsg}` }],
+            summary: mergeMsg,
+          },
+        };
       }
       return { merged: true, reviewResult };
     }
@@ -179,19 +187,23 @@ export async function reviewAndMerge(
     // Request changes — feed issues back to coder
     if (cycle < maxCycles - 1) {
       db.update(tasks)
-        .set({ status: "fixing", updatedAt: new Date() })
+        .set({ status: 'fixing', updatedAt: new Date() })
         .where(eq(tasks.id, task.id))
         .run();
 
       // Ensure we're on the task branch before invoking the coder for fixes
       if (task.branchName) {
-        try { git(["checkout", task.branchName], taskCwd); } catch { /* may already be on it */ }
+        try {
+          git(['checkout', task.branchName], taskCwd);
+        } catch {
+          /* may already be on it */
+        }
       }
 
       const coderAdapter = resolveAdapter(config.roles.coder, config);
       const fixPrompt = `The reviewer found issues with your implementation. Fix them:
 
-${reviewResult.issues.map((i) => `- ${i.file ?? ""}:${i.line ?? ""} [${i.severity ?? "error"}] ${i.message}`).join("\n")}
+${reviewResult.issues.map((i) => `- ${i.file ?? ''}:${i.line ?? ''} [${i.severity ?? 'error'}] ${i.message}`).join('\n')}
 
 Summary: ${reviewResult.summary}`;
 
@@ -205,14 +217,21 @@ Summary: ${reviewResult.summary}`;
 
       // Re-commit fixes
       try {
-        git(["add", "-A"], taskCwd);
-        git(["commit", "-m", `fix(${displayTaskId(task.id)}): address review feedback (cycle ${cycle + 2})`], taskCwd);
+        git(['add', '-A'], taskCwd);
+        git(
+          [
+            'commit',
+            '-m',
+            `fix(${displayTaskId(task.id)}): address review feedback (cycle ${cycle + 2})`,
+          ],
+          taskCwd,
+        );
       } catch {
         // No changes to commit
       }
 
       db.update(tasks)
-        .set({ status: "reviewing", updatedAt: new Date() })
+        .set({ status: 'reviewing', updatedAt: new Date() })
         .where(eq(tasks.id, task.id))
         .run();
     }
@@ -220,14 +239,14 @@ Summary: ${reviewResult.summary}`;
 
   // Max cycles exhausted
   db.update(tasks)
-    .set({ status: "failed", updatedAt: new Date() })
+    .set({ status: 'failed', updatedAt: new Date() })
     .where(eq(tasks.id, task.id))
     .run();
 
   return {
     merged: false,
     reviewResult: {
-      verdict: "request_changes",
+      verdict: 'request_changes',
       issues: [],
       summary: `Failed after ${maxCycles} review cycles`,
     },

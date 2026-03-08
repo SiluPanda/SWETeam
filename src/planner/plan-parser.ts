@@ -45,9 +45,9 @@ function tryParseJson(text: string): ParsedTask[] | null {
 
   // Strategy 3: Find a JSON array by matching outermost [ ... ]
   // This handles cases where the result text has no code block wrapping
-  const arrayStart = text.indexOf("[");
+  const arrayStart = text.indexOf('[');
   if (arrayStart !== -1) {
-    const arrayEnd = text.lastIndexOf("]");
+    const arrayEnd = text.lastIndexOf(']');
     if (arrayEnd > arrayStart) {
       const result = tryParse(text.slice(arrayStart, arrayEnd + 1));
       if (result) return result;
@@ -55,9 +55,9 @@ function tryParseJson(text: string): ParsedTask[] | null {
   }
 
   // Strategy 4: Find a JSON object with "tasks" key
-  const objStart = text.indexOf("{");
+  const objStart = text.indexOf('{');
   if (objStart !== -1) {
-    const objEnd = text.lastIndexOf("}");
+    const objEnd = text.lastIndexOf('}');
     if (objEnd > objStart) {
       const result = tryParse(text.slice(objStart, objEnd + 1));
       if (result) return result;
@@ -71,23 +71,27 @@ function tryParseJson(text: string): ParsedTask[] | null {
 /** Strip inline markdown formatting (bold, italic, code spans) from a string. */
 function stripInlineMarkdown(text: string): string {
   return text
-    .replace(/\*\*(.+?)\*\*/g, "$1")   // **bold**
-    .replace(/__(.+?)__/g, "$1")         // __bold__
-    .replace(/\*(.+?)\*/g, "$1")         // *italic*
-    .replace(/(?<=^|\s)_([^_]+)_(?=\s|$)/g, "$1")  // _italic_ (only with surrounding whitespace, preserves underscores in identifiers)
-    .replace(/`([^`]+)`/g, "$1")         // `code`
+    .replace(/\*\*(.+?)\*\*/g, '$1') // **bold**
+    .replace(/__(.+?)__/g, '$1') // __bold__
+    .replace(/\*(.+?)\*/g, '$1') // *italic*
+    .replace(/(?<=^|\s)_([^_]+)_(?=\s|$)/g, '$1') // _italic_ (only with surrounding whitespace, preserves underscores in identifiers)
+    .replace(/`([^`]+)`/g, '$1') // `code`
     .trim();
 }
 
 function normalizeTask(raw: Record<string, unknown>, index: number): ParsedTask {
-  const rawId = String(raw.id ?? `task-${String(index + 1).padStart(3, "0")}`);
+  const rawId = String(raw.id ?? `task-${String(index + 1).padStart(3, '0')}`);
   return {
     id: stripInlineMarkdown(rawId),
-    title: stripInlineMarkdown(String(raw.title ?? "Untitled task")),
-    description: stripInlineMarkdown(String(raw.description ?? "")),
-    filesLikelyTouched: toStringArray(raw.files_likely_touched ?? raw.filesLikelyTouched ?? raw.files ?? []),
+    title: stripInlineMarkdown(String(raw.title ?? 'Untitled task')),
+    description: stripInlineMarkdown(String(raw.description ?? '')),
+    filesLikelyTouched: toStringArray(
+      raw.files_likely_touched ?? raw.filesLikelyTouched ?? raw.files ?? [],
+    ),
     dependsOn: toStringArray(raw.depends_on ?? raw.dependsOn ?? raw.dependencies ?? []),
-    acceptanceCriteria: toStringArray(raw.acceptance_criteria ?? raw.acceptanceCriteria ?? raw.criteria ?? []),
+    acceptanceCriteria: toStringArray(
+      raw.acceptance_criteria ?? raw.acceptanceCriteria ?? raw.criteria ?? [],
+    ),
   };
 }
 
@@ -95,9 +99,9 @@ function toStringArray(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.map(String);
   }
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     return value
-      .split(",")
+      .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
   }
@@ -113,17 +117,18 @@ function parseMarkdown(text: string): ParsedTask[] {
   while ((match = taskPattern.exec(text)) !== null) {
     const rawId = match[1];
     const title = match[2].trim();
-    const id = rawId.includes("-") ? rawId : `task-${String(rawId).padStart(3, "0")}`;
+    const id = rawId.includes('-') ? rawId : `task-${String(rawId).padStart(3, '0')}`;
 
     // Get content until next ### or end
     const startIdx = match.index + match[0].length;
-    const nextMatch = text.indexOf("\n###", startIdx);
+    const nextMatch = text.indexOf('\n###', startIdx);
     const content = text.slice(startIdx, nextMatch === -1 ? undefined : nextMatch);
 
-    const description = extractSection(content, "description") || content.trim().split("\n")[0] || "";
-    const files = extractListItems(content, "files");
-    const deps = extractListItems(content, "depends_on|depends|dependencies|deps");
-    const criteria = extractListItems(content, "acceptance|criteria");
+    const description =
+      extractSection(content, 'description') || content.trim().split('\n')[0] || '';
+    const files = extractListItems(content, 'files');
+    const deps = extractListItems(content, 'depends_on|depends|dependencies|deps');
+    const criteria = extractListItems(content, 'acceptance|criteria');
 
     tasks.push({
       id,
@@ -141,33 +146,33 @@ function parseMarkdown(text: string): ParsedTask[] {
 function extractSection(content: string, keyword: string): string {
   const pattern = new RegExp(
     `(?:^|\\n)\\s*\\*?\\*?${keyword}\\*?\\*?[:\\s]*(.+?)(?=\\n\\s*\\*?\\*?\\w+[:\\s]|$)`,
-    "is",
+    'is',
   );
   const match = content.match(pattern);
-  return match ? match[1].trim() : "";
+  return match ? match[1].trim() : '';
 }
 
 function extractListItems(content: string, keyword: string): string[] {
-  const pattern = new RegExp(
-    `(?:${keyword})[:\\s]*\\n((?:\\s*[-*]\\s+.+\\n?)+)`,
-    "i",
-  );
+  const pattern = new RegExp(`(?:${keyword})[:\\s]*\\n((?:\\s*[-*]\\s+.+\\n?)+)`, 'i');
   const match = content.match(pattern);
   if (!match) return [];
 
   return match[1]
-    .split("\n")
-    .map((line) => line.replace(/^\s*[-*]\s+/, "").trim())
+    .split('\n')
+    .map((line) => line.replace(/^\s*[-*]\s+/, '').trim())
     .filter(Boolean);
 }
 
 function parseTable(text: string): ParsedTask[] {
   // Match markdown tables with a header row containing "id" and "title"
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
   let headerIdx = -1;
 
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes("|") && /\bid\b/i.test(lines[i]) && /\btitle\b/i.test(lines[i])) {
+    if (lines[i].includes('|') && /\bid\b/i.test(lines[i]) && /\btitle\b/i.test(lines[i])) {
       headerIdx = i;
       break;
     }
@@ -178,15 +183,18 @@ function parseTable(text: string): ParsedTask[] {
   // Split table row into cells, preserving empty cells but stripping
   // the leading/trailing empty strings from outer `|` delimiters
   const parseCells = (line: string): string[] => {
-    const cells = line.split("|").map((c) => c.trim());
+    const cells = line.split('|').map((c) => c.trim());
     // Remove leading/trailing empty strings from outer pipes
-    if (cells.length > 0 && cells[0] === "") cells.shift();
-    if (cells.length > 0 && cells[cells.length - 1] === "") cells.pop();
+    if (cells.length > 0 && cells[0] === '') cells.shift();
+    if (cells.length > 0 && cells[cells.length - 1] === '') cells.pop();
     return cells;
   };
 
   const headers = parseCells(lines[headerIdx]).map((h) =>
-    h.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z_]/g, ""),
+    h
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z_]/g, ''),
   );
 
   // Skip separator row (e.g., |---|---|)
@@ -197,7 +205,7 @@ function parseTable(text: string): ParsedTask[] {
 
   const tasks: ParsedTask[] = [];
   for (let i = dataStart; i < lines.length; i++) {
-    if (!lines[i].includes("|")) continue;
+    if (!lines[i].includes('|')) continue;
     const cells = parseCells(lines[i]);
     if (cells.length < 2) continue;
 
@@ -207,15 +215,21 @@ function parseTable(text: string): ParsedTask[] {
     }
 
     tasks.push({
-      id: stripInlineMarkdown(row.id || `task-${String(tasks.length + 1).padStart(3, "0")}`),
-      title: row.title || "Untitled task",
-      description: row.description || "",
-      filesLikelyTouched: (row.files_likely_touched || row.files || "")
-        .split(",").map((s) => s.trim()).filter(Boolean),
-      dependsOn: (row.depends_on || row.dependencies || "")
-        .split(",").map((s) => s.trim()).filter(Boolean),
-      acceptanceCriteria: (row.acceptance_criteria || row.criteria || "")
-        .split(",").map((s) => s.trim()).filter(Boolean),
+      id: stripInlineMarkdown(row.id || `task-${String(tasks.length + 1).padStart(3, '0')}`),
+      title: row.title || 'Untitled task',
+      description: row.description || '',
+      filesLikelyTouched: (row.files_likely_touched || row.files || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+      dependsOn: (row.depends_on || row.dependencies || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+      acceptanceCriteria: (row.acceptance_criteria || row.criteria || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
     });
   }
 
@@ -225,9 +239,9 @@ function parseTable(text: string): ParsedTask[] {
 /** Normalize box-drawing characters (│┌┬┐├┼┤└┴┘─) to ASCII equivalents for parsing. */
 function normalizeBoxDrawing(text: string): string {
   return text
-    .replace(/│/g, "|")
-    .replace(/[┌┬┐├┼┤└┴┘─]/g, "-")
-    .replace(/[…]/g, "...");
+    .replace(/│/g, '|')
+    .replace(/[┌┬┐├┼┤└┴┘─]/g, '-')
+    .replace(/[…]/g, '...');
 }
 
 export function parsePlan(agentOutput: string): ParsedPlan {

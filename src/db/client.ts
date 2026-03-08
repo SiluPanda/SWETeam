@@ -1,13 +1,13 @@
-import { mkdirSync, readFileSync, readdirSync } from "fs";
-import { join, dirname } from "path";
-import { homedir } from "os";
-import { fileURLToPath } from "url";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import * as schema from "./schema.js";
+import { mkdirSync, readFileSync, readdirSync } from 'fs';
+import { join, dirname } from 'path';
+import { homedir } from 'os';
+import { fileURLToPath } from 'url';
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import * as schema from './schema.js';
 
-const SWETEAM_DIR = join(homedir(), ".sweteam");
-const DB_PATH = join(SWETEAM_DIR, "sweteam.db");
+const SWETEAM_DIR = join(homedir(), '.sweteam');
+const DB_PATH = join(SWETEAM_DIR, 'sweteam.db');
 
 function ensureDir(dir: string): void {
   mkdirSync(dir, { recursive: true });
@@ -15,7 +15,7 @@ function ensureDir(dir: string): void {
 
 function getMigrationsDir(): string {
   const thisFile = fileURLToPath(import.meta.url);
-  return join(dirname(thisFile), "../../drizzle/migrations");
+  return join(dirname(thisFile), '../../drizzle/migrations');
 }
 
 function runMigrations(sqlite: Database.Database): void {
@@ -24,7 +24,7 @@ function runMigrations(sqlite: Database.Database): void {
   let sqlFiles: string[];
   try {
     sqlFiles = readdirSync(migrationsDir)
-      .filter((f) => f.endsWith(".sql"))
+      .filter((f) => f.endsWith('.sql'))
       .sort();
   } catch {
     return;
@@ -40,16 +40,16 @@ function runMigrations(sqlite: Database.Database): void {
 
   const applied = new Set(
     sqlite
-      .prepare("SELECT hash FROM __drizzle_migrations")
+      .prepare('SELECT hash FROM __drizzle_migrations')
       .all()
       .map((r) => (r as { hash: string }).hash),
   );
 
   for (const file of sqlFiles) {
     if (applied.has(file)) continue;
-    const sql = readFileSync(join(migrationsDir, file), "utf-8");
+    const sql = readFileSync(join(migrationsDir, file), 'utf-8');
     const statements = sql
-      .split("--> statement-breakpoint")
+      .split('--> statement-breakpoint')
       .map((s) => s.trim())
       .filter(Boolean);
     const runAll = sqlite.transaction(() => {
@@ -57,9 +57,7 @@ function runMigrations(sqlite: Database.Database): void {
         sqlite.exec(stmt);
       }
       sqlite
-        .prepare(
-          "INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)",
-        )
+        .prepare('INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)')
         .run(file, Date.now());
     });
     runAll();
@@ -69,9 +67,9 @@ function runMigrations(sqlite: Database.Database): void {
 function createConnection(dbPath: string = DB_PATH): Database.Database {
   ensureDir(dirname(dbPath));
   const sqlite = new Database(dbPath);
-  sqlite.pragma("journal_mode = WAL");
-  sqlite.pragma("foreign_keys = ON");
-  sqlite.pragma("busy_timeout = 5000");
+  sqlite.pragma('journal_mode = WAL');
+  sqlite.pragma('foreign_keys = ON');
+  sqlite.pragma('busy_timeout = 5000');
   runMigrations(sqlite);
   return sqlite;
 }

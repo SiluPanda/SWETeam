@@ -1,18 +1,17 @@
-import { existsSync } from "fs";
-import { listSessions, getSession } from "../session/manager.js";
-import { transition } from "../session/state-machine.js";
-import { renderBanner, type RecentSession } from "../ui/banner.js";
-import { promptLine, ESCAPE_SIGNAL } from "../ui/prompt.js";
+import { listSessions, getSession } from '../session/manager.js';
+import { transition } from '../session/state-machine.js';
+import { renderBanner, type RecentSession } from '../ui/banner.js';
+import { promptLine, ESCAPE_SIGNAL } from '../ui/prompt.js';
 import {
   createSessionHandlers,
   handleSessionCommand,
   type SessionHandlers,
-} from "../session/interactive.js";
-import { getStatusDisplay, getHelpDisplay } from "../session/in-session-commands.js";
-import { watchLog, getLogPath, isLogActive, writeEvent, type AgentEvent } from "../session/agent-log.js";
-import { AgentPanel } from "../ui/agent-panel.js";
-import { SessionSidebar } from "../ui/sidebar.js";
-import { friendlyError } from "../orchestrator/error-handling.js";
+} from '../session/interactive.js';
+import { getStatusDisplay, getHelpDisplay } from '../session/in-session-commands.js';
+import { watchLog, isLogActive, writeEvent, type AgentEvent } from '../session/agent-log.js';
+import { AgentPanel } from '../ui/agent-panel.js';
+import { SessionSidebar } from '../ui/sidebar.js';
+import { friendlyError } from '../orchestrator/error-handling.js';
 
 // ── Active session state ────────────────────────────────────────────
 
@@ -29,19 +28,19 @@ const sidebar = new SessionSidebar();
 // ── Commands & completions ──────────────────────────────────────────
 
 const COMMANDS = [
-  "/list",
-  "/create",
-  "/enter",
-  "/show",
-  "/stop",
-  "/delete",
-  "/init",
-  "/help",
-  "/exit",
-  "/quit",
+  '/list',
+  '/create',
+  '/enter',
+  '/show',
+  '/stop',
+  '/delete',
+  '/init',
+  '/help',
+  '/exit',
+  '/quit',
 ] as const;
 
-const SESSION_ID_COMMANDS = new Set(["/enter", "/show", "/stop", "/delete"]);
+const SESSION_ID_COMMANDS = new Set(['/enter', '/show', '/stop', '/delete']);
 
 const HELP_TEXT_ROOT = `Commands:
   /create [repo]          Create a new session (defaults to current directory)
@@ -59,7 +58,7 @@ export function parseReplInput(input: string): {
   args: string[];
 } {
   const trimmed = input.trim();
-  if (!trimmed) return { command: "", args: [] };
+  if (!trimmed) return { command: '', args: [] };
 
   const parts = trimmed.split(/\s+/);
   const command = parts[0];
@@ -71,7 +70,7 @@ export function parseReplInput(input: string): {
 export function completer(line: string): [string[], string] {
   const trimmed = line.trimStart();
 
-  if (!trimmed.startsWith("/")) {
+  if (!trimmed.startsWith('/')) {
     return [[], line];
   }
 
@@ -87,9 +86,7 @@ export function completer(line: string): [string[], string] {
     try {
       const sessions = listSessions();
       const partial = parts[1];
-      const ids = sessions
-        .map((s) => s.id)
-        .filter((id) => id.startsWith(partial));
+      const ids = sessions.map((s) => s.id).filter((id) => id.startsWith(partial));
       return [ids, partial];
     } catch {
       return [[], parts[1]];
@@ -102,7 +99,7 @@ export function completer(line: string): [string[], string] {
 /** Return completions for the live autocomplete dropdown. */
 export function getCompletions(line: string): string[] {
   const trimmed = line.trimStart();
-  if (!trimmed.startsWith("/")) return [];
+  if (!trimmed.startsWith('/')) return [];
 
   const parts = trimmed.split(/\s+/);
 
@@ -120,7 +117,7 @@ export function getCompletions(line: string): string[] {
       return sessions
         .map((s) => s.id)
         .filter((id) => id.startsWith(partial) && id !== partial)
-        .map((id) => cmd + " " + id);
+        .map((id) => cmd + ' ' + id);
     } catch {
       return [];
     }
@@ -145,7 +142,7 @@ function watchBuildLive(sessionId: string): Promise<void> {
 
     // Input mode state
     let inputMode = false;
-    let inputBuffer = "";
+    let inputBuffer = '';
     let pendingRequestId: string | null = null;
 
     function finish(reason?: string) {
@@ -157,7 +154,7 @@ function watchBuildLive(sessionId: string): Promise<void> {
       if (staleTimer) clearInterval(staleTimer);
       watcher.stop();
       panel.destroy();
-      process.stdin.removeListener("data", onKey);
+      process.stdin.removeListener('data', onKey);
       if (process.stdin.isTTY) {
         process.stdin.setRawMode!(false);
       }
@@ -170,7 +167,7 @@ function watchBuildLive(sessionId: string): Promise<void> {
 
     function enterInputMode(promptText: string, requestId: string) {
       inputMode = true;
-      inputBuffer = "";
+      inputBuffer = '';
       pendingRequestId = requestId;
       panel.destroy(); // Temporarily clear panel so prompt is visible
       process.stdout.write(`\nInput needed: ${promptText}\n> `);
@@ -178,7 +175,7 @@ function watchBuildLive(sessionId: string): Promise<void> {
 
     function exitInputMode() {
       inputMode = false;
-      inputBuffer = "";
+      inputBuffer = '';
       pendingRequestId = null;
     }
 
@@ -186,33 +183,33 @@ function watchBuildLive(sessionId: string): Promise<void> {
       if (!pendingRequestId) return;
       const response = inputBuffer.trim();
       writeEvent(sessionId, {
-        type: "input-response",
+        type: 'input-response',
         id: pendingRequestId,
         requestId: pendingRequestId,
         response,
       });
-      process.stdout.write("\n");
+      process.stdout.write('\n');
       exitInputMode();
     }
 
     const watcher = watchLog(sessionId, (event: AgentEvent) => {
       lastEventTime = Date.now();
       switch (event.type) {
-        case "agent-start":
+        case 'agent-start':
           panel.addAgent(event.id, event.role!, event.taskId!, event.title!);
           break;
-        case "output":
+        case 'output':
           panel.appendOutput(event.id, event.chunk!);
           break;
-        case "agent-end":
+        case 'agent-end':
           panel.completeAgent(event.id, event.success!);
           break;
-        case "build-complete":
-        case "phase-complete":
+        case 'build-complete':
+        case 'phase-complete':
           finish();
           break;
-        case "input-needed":
-          enterInputMode(event.promptText ?? "(input needed)", event.requestId!);
+        case 'input-needed':
+          enterInputMode(event.promptText ?? '(input needed)', event.requestId!);
           break;
         // input-response is handled by the build process, not the REPL watcher
       }
@@ -221,7 +218,9 @@ function watchBuildLive(sessionId: string): Promise<void> {
     // Auto-detach if no new events arrive for 30 seconds (build is dead)
     const staleTimer = setInterval(() => {
       if (Date.now() - lastEventTime > 30_000) {
-        finish("\nNo build activity for 30s. Build may still be running — type @status to check.\n");
+        finish(
+          '\nNo build activity for 30s. Build may still be running — type @status to check.\n',
+        );
       }
     }, 1000);
 
@@ -230,25 +229,25 @@ function watchBuildLive(sessionId: string): Promise<void> {
 
       if (inputMode) {
         // In input mode: collect typed text
-        if (key === "\x1b") {
+        if (key === '\x1b') {
           // Escape: cancel input and detach
-          process.stdout.write("\n(input cancelled)\n");
+          process.stdout.write('\n(input cancelled)\n');
           exitInputMode();
-          finish("\nDetached from build output.\n");
-        } else if (key === "\r" || key === "\n") {
+          finish('\nDetached from build output.\n');
+        } else if (key === '\r' || key === '\n') {
           // Enter: submit the response
           submitInput();
-        } else if (key === "\x7f" || key === "\b") {
+        } else if (key === '\x7f' || key === '\b') {
           // Backspace
           if (inputBuffer.length > 0) {
             inputBuffer = inputBuffer.slice(0, -1);
-            process.stdout.write("\b \b");
+            process.stdout.write('\b \b');
           }
-        } else if (key === "\x03") {
+        } else if (key === '\x03') {
           // Ctrl-C: cancel input and detach
-          process.stdout.write("\n(input cancelled)\n");
+          process.stdout.write('\n(input cancelled)\n');
           exitInputMode();
-          finish("\nDetached from build output.\n");
+          finish('\nDetached from build output.\n');
         } else if (key.charCodeAt(0) >= 32) {
           // Printable character
           inputBuffer += key;
@@ -258,8 +257,8 @@ function watchBuildLive(sessionId: string): Promise<void> {
       }
 
       // Normal watch mode: Enter/Ctrl-C/Escape to detach
-      if (key === "\r" || key === "\n" || key === "\x03" || key === "\x1b") {
-        finish("\nDetached from build output.\n");
+      if (key === '\r' || key === '\n' || key === '\x03' || key === '\x1b') {
+        finish('\nDetached from build output.\n');
       }
     }
 
@@ -267,7 +266,7 @@ function watchBuildLive(sessionId: string): Promise<void> {
       process.stdin.setRawMode!(true);
     }
     process.stdin.resume();
-    process.stdin.on("data", onKey);
+    process.stdin.on('data', onKey);
   });
 }
 
@@ -275,129 +274,126 @@ function watchBuildLive(sessionId: string): Promise<void> {
 
 async function dispatch(command: string, args: string[]): Promise<void> {
   switch (command) {
-    case "/list": {
-      const { handleList } = await import("../commands/list.js");
+    case '/list': {
+      const { handleList } = await import('../commands/list.js');
       await handleList();
       break;
     }
-    case "/create": {
+    case '/create': {
       const repo = args.length > 0 ? args[0] : undefined;
-      const { handleCreate } = await import("../commands/create.js");
+      const { handleCreate } = await import('../commands/create.js');
       const result = await handleCreate(repo);
       if (result) {
         activeSession = {
           id: result.id,
           repo: result.repo,
           repoPath: result.repoLocalPath,
-          handlers: createSessionHandlers(
-            result.id,
-            result.repo,
-            "",
-            result.repoLocalPath,
-          ),
+          handlers: createSessionHandlers(result.id, result.repo, '', result.repoLocalPath),
         };
         sidebar.setActiveSession(result.id);
         sidebar.invalidate();
-        console.log("Type your goal or describe what you want to build.\n");
+        console.log('Type your goal or describe what you want to build.\n');
       }
       break;
     }
-    case "/enter": {
+    case '/enter': {
       if (args.length < 1) {
-        console.log("Usage: /enter <session_id>");
+        console.log('Usage: /enter <session_id>');
         break;
       }
-      const { getSession } = await import("../session/manager.js");
+      const { getSession } = await import('../session/manager.js');
       const session = getSession(args[0]);
       if (!session) {
         console.log(`Session not found: ${args[0]}`);
         break;
       }
-      const repoPath = session.repoLocalPath ?? ".";
+      const repoPath = session.repoLocalPath ?? '.';
       activeSession = {
         id: session.id,
         repo: session.repo,
         repoPath,
-        handlers: createSessionHandlers(
-          session.id,
-          session.repo,
-          session.goal,
-          repoPath,
-        ),
+        handlers: createSessionHandlers(session.id, session.repo, session.goal, repoPath),
       };
       sidebar.setActiveSession(session.id);
       console.log(`\nEntered session ${session.id} (${session.repo})`);
-      console.log(`  Goal:   ${session.goal || "(not set yet)"}`);
+      console.log(`  Goal:   ${session.goal || '(not set yet)'}`);
       console.log(`  Status: ${session.status}\n`);
 
       // Status-aware guidance on re-entry
-      if (session.status === "building" || session.status === "iterating") {
+      if (session.status === 'building' || session.status === 'iterating') {
         // Check if a build is actually running (log has recent writes)
         if (isLogActive(session.id)) {
-          console.log("Attaching to live build output... (press Enter or Escape to detach)\n");
+          console.log('Attaching to live build output... (press Enter or Escape to detach)\n');
           await watchBuildLive(session.id);
           // Re-check status after watching — build may have completed
           const updated = getSession(session.id);
-          if (updated && updated.status === "awaiting_feedback") {
-            console.log("Build complete. Send feedback or @feedback <text>.\n");
-          } else if (updated && updated.status === "building") {
+          if (updated && updated.status === 'awaiting_feedback') {
+            console.log('Build complete. Send feedback or @feedback <text>.\n');
+          } else if (updated && updated.status === 'building') {
             console.log(getStatusDisplay(session.id));
-            console.log("\nBuild still in progress. Re-enter to reattach, or type @build to restart.\n");
+            console.log(
+              '\nBuild still in progress. Re-enter to reattach, or type @build to restart.\n',
+            );
           }
         } else {
           // Build is stale — transition back to planning so @build can work
-          try { transition(session.id, "planning"); } catch { /* already transitioned */ }
+          try {
+            transition(session.id, 'planning');
+          } catch {
+            /* already transitioned */
+          }
           console.log(getStatusDisplay(session.id));
-          console.log("Build was interrupted. Type @build to restart.\n");
+          console.log('Build was interrupted. Type @build to restart.\n');
         }
-      } else if (session.status === "awaiting_feedback") {
+      } else if (session.status === 'awaiting_feedback') {
         console.log(getStatusDisplay(session.id));
         // Check if build actually completed or was interrupted (all tasks still queued)
-        const { getTasksForSession: getTasks } = await import("../orchestrator/orchestrator.js");
+        const { getTasksForSession: getTasks } = await import('../orchestrator/orchestrator.js');
         const sessionTasks = getTasks(session.id);
-        const allQueued = sessionTasks.length > 0 && sessionTasks.every((t) => t.status === "queued");
+        const allQueued =
+          sessionTasks.length > 0 && sessionTasks.every((t) => t.status === 'queued');
         if (allQueued) {
-          console.log("Build was interrupted before any tasks ran. Type @build to retry.\n");
+          console.log('Build was interrupted before any tasks ran. Type @build to retry.\n');
         } else {
-          console.log("Send feedback or @feedback <text>.\n");
+          console.log('Send feedback or @feedback <text>.\n');
         }
-      } else if (session.status === "stopped") {
+      } else if (session.status === 'stopped') {
         if (session.planJson) {
-          console.log("Session stopped. Type @build to rebuild, or chat to refine the plan.\n");
+          console.log('Session stopped. Type @build to rebuild, or chat to refine the plan.\n');
         } else {
-          console.log("Session stopped. Send a message to resume planning.\n");
+          console.log('Session stopped. Send a message to resume planning.\n');
         }
-      } else if (session.status === "planning") {
+      } else if (session.status === 'planning') {
         if (isLogActive(session.id)) {
-          console.log("Planner is running... (press Escape to background)\n");
+          console.log('Planner is running... (press Escape to background)\n');
           await watchBuildLive(session.id);
           const updatedPlanning = getSession(session.id);
           if (updatedPlanning?.planJson) {
-            console.log("Plan ready. Type @build to start building, or continue refining.\n");
+            console.log('Plan ready. Type @build to start building, or continue refining.\n');
           }
         } else if (session.planJson) {
-          console.log("A plan exists. Type @build or continue chatting.\n");
+          console.log('A plan exists. Type @build or continue chatting.\n');
         } else {
-          console.log("Describe what you want to build.\n");
+          console.log('Describe what you want to build.\n');
         }
       }
       break;
     }
-    case "/show": {
+    case '/show': {
       if (args.length < 1) {
-        console.log("Usage: /show <session_id>");
+        console.log('Usage: /show <session_id>');
         break;
       }
-      const { handleShow } = await import("../commands/show.js");
+      const { handleShow } = await import('../commands/show.js');
       await handleShow(args[0]);
       break;
     }
-    case "/stop": {
+    case '/stop': {
       if (args.length < 1) {
-        console.log("Usage: /stop <session_id>");
+        console.log('Usage: /stop <session_id>');
         break;
       }
-      const { handleStop } = await import("../commands/stop.js");
+      const { handleStop } = await import('../commands/stop.js');
       await handleStop(args[0]);
       // If we stopped the active session, clear it
       if (activeSession && activeSession.id === args[0]) {
@@ -407,28 +403,28 @@ async function dispatch(command: string, args: string[]): Promise<void> {
       sidebar.invalidate();
       break;
     }
-    case "/delete": {
+    case '/delete': {
       if (args.length < 1) {
-        console.log("Usage: /delete <session_id>  or  /delete --all");
+        console.log('Usage: /delete <session_id>  or  /delete --all');
         break;
       }
-      const { handleDelete } = await import("../commands/delete.js");
+      const { handleDelete } = await import('../commands/delete.js');
       await handleDelete(args[0]);
       // Clear active session if it was deleted
-      if (activeSession && (args[0] === "--all" || activeSession.id === args[0])) {
+      if (activeSession && (args[0] === '--all' || activeSession.id === args[0])) {
         activeSession = null;
         sidebar.setActiveSession(null);
       }
       sidebar.invalidate();
       break;
     }
-    case "/init": {
-      const { runInit, formatInitOutput } = await import("../commands/init.js");
+    case '/init': {
+      const { runInit, formatInitOutput } = await import('../commands/init.js');
       const result = runInit();
       console.log(formatInitOutput(result));
       break;
     }
-    case "/help": {
+    case '/help': {
       if (activeSession) {
         console.log(getHelpDisplay(activeSession.id));
         console.log();
@@ -437,9 +433,7 @@ async function dispatch(command: string, args: string[]): Promise<void> {
       break;
     }
     default: {
-      console.log(
-        `Unknown command: ${command}. Type /help for available commands.`,
-      );
+      console.log(`Unknown command: ${command}. Type /help for available commands.`);
     }
   }
 }
@@ -447,18 +441,17 @@ async function dispatch(command: string, args: string[]): Promise<void> {
 // ── Prompt string ───────────────────────────────────────────────────
 
 const PROMPT_STATE_LABELS: Record<string, string> = {
-  planning: "planning",
-  building: "building",
-  awaiting_feedback: "feedback",
-  iterating: "iterating",
-  stopped: "stopped",
+  planning: 'planning',
+  building: 'building',
+  awaiting_feedback: 'feedback',
+  iterating: 'iterating',
+  stopped: 'stopped',
 };
 
 function getPrompt(): string {
   if (activeSession) {
-    const short =
-      activeSession.repo.split("/").pop() || activeSession.id;
-    let stateTag = "";
+    const short = activeSession.repo.split('/').pop() || activeSession.id;
+    let stateTag = '';
     try {
       const session = getSession(activeSession.id);
       if (session?.status) {
@@ -470,7 +463,7 @@ function getPrompt(): string {
     }
     return `${short}${stateTag}> `;
   }
-  return "sweteam> ";
+  return 'sweteam> ';
 }
 
 // ── Main loop ───────────────────────────────────────────────────────
@@ -524,7 +517,7 @@ export async function runRepl(opts?: ReplOptions): Promise<void> {
     // ── Escape: leave session, go back to sweteam> ──
     if (line === ESCAPE_SIGNAL) {
       if (activeSession) {
-        const short = activeSession.repo.split("/").pop() || activeSession.id;
+        const short = activeSession.repo.split('/').pop() || activeSession.id;
         console.log(`Left session ${activeSession.id} (${short})`);
         activeSession = null;
         sidebar.setActiveSession(null);
@@ -536,9 +529,9 @@ export async function runRepl(opts?: ReplOptions): Promise<void> {
     if (!trimmed) continue;
 
     // ── / commands always work ──
-    if (trimmed.startsWith("/")) {
+    if (trimmed.startsWith('/')) {
       const { command, args } = parseReplInput(trimmed);
-      if (command === "/exit" || command === "/quit") break;
+      if (command === '/exit' || command === '/quit') break;
       try {
         await dispatch(command, args);
       } catch (err) {
@@ -548,34 +541,31 @@ export async function runRepl(opts?: ReplOptions): Promise<void> {
     }
 
     // ── @ commands: only in an active session ──
-    if (trimmed.startsWith("@")) {
+    if (trimmed.startsWith('@')) {
       if (!activeSession) {
-        console.log("No active session. Use /create or /enter first.");
+        console.log('No active session. Use /create or /enter first.');
         continue;
       }
       try {
-        const stopped = await handleSessionCommand(
-          trimmed,
-          activeSession.handlers,
-        );
+        const stopped = await handleSessionCommand(trimmed, activeSession.handlers);
         if (stopped) {
           activeSession = null;
           sidebar.setActiveSession(null);
           sidebar.invalidate();
         }
         // After @build or @feedback, auto-attach to live output
-        if ((trimmed === "@build" || trimmed.startsWith("@feedback ")) && activeSession) {
+        if ((trimmed === '@build' || trimmed.startsWith('@feedback ')) && activeSession) {
           if (isLogActive(activeSession.id)) {
-            console.log("Watching output... (press Escape to background)\n");
+            console.log('Watching output... (press Escape to background)\n');
             await watchBuildLive(activeSession.id);
             // Re-check session status after watching
-            const { getSession: gs } = await import("../session/manager.js");
+            const { getSession: gs } = await import('../session/manager.js');
             const updated = gs(activeSession.id);
-            if (updated?.status === "awaiting_feedback") {
-              console.log("Build complete. Send feedback or @feedback <text>.\n");
-            } else if (updated?.status === "building" || updated?.status === "iterating") {
+            if (updated?.status === 'awaiting_feedback') {
+              console.log('Build complete. Send feedback or @feedback <text>.\n');
+            } else if (updated?.status === 'building' || updated?.status === 'iterating') {
               console.log(getStatusDisplay(activeSession.id));
-              console.log("\nBuild running in background. Type @status to check progress.\n");
+              console.log('\nBuild running in background. Type @status to check progress.\n');
             }
           }
         }
@@ -595,11 +585,11 @@ export async function runRepl(opts?: ReplOptions): Promise<void> {
           // Show status-appropriate message after watcher detaches
           if (activeSession) {
             const updated = getSession(activeSession.id);
-            if (updated?.status === "awaiting_feedback") {
-              console.log("Build complete. Send feedback or @feedback <text>.\n");
-            } else if (updated?.status === "planning" && updated?.planJson) {
+            if (updated?.status === 'awaiting_feedback') {
+              console.log('Build complete. Send feedback or @feedback <text>.\n');
+            } else if (updated?.status === 'planning' && updated?.planJson) {
               // Display the planner's response so the user can see the plan
-              console.log("\n" + updated.planJson + "\n");
+              console.log('\n' + updated.planJson + '\n');
             }
           }
         }
@@ -607,9 +597,7 @@ export async function runRepl(opts?: ReplOptions): Promise<void> {
         console.error(friendlyError(err instanceof Error ? err.message : String(err)));
       }
     } else {
-      console.log(
-        "No active session. Use /create or /enter to start one.",
-      );
+      console.log('No active session. Use /create or /enter to start one.');
     }
   }
 

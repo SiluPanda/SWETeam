@@ -1,4 +1,4 @@
-import chalk from "chalk";
+import chalk from 'chalk';
 
 /**
  * Streaming-friendly markdown renderer for terminal output.
@@ -20,12 +20,12 @@ export class MarkdownRenderer {
       const flushed = this.flushTable();
       this.inCodeBlock = !this.inCodeBlock;
       if (this.inCodeBlock) {
-        const lang = line.replace(/^\s*```/, "").trim();
-        const label = lang ? ` ${lang} ` : "";
+        const lang = line.replace(/^\s*```/, '').trim();
+        const label = lang ? ` ${lang} ` : '';
         const ruleLen = Math.max(0, 40 - label.length);
-        return [...flushed, chalk.dim(`  ${"─".repeat(2)}${label}${"─".repeat(ruleLen)}`)];
+        return [...flushed, chalk.dim(`  ${'─'.repeat(2)}${label}${'─'.repeat(ruleLen)}`)];
       }
-      return [...flushed, chalk.dim(`  ${"─".repeat(42)}`)];
+      return [...flushed, chalk.dim(`  ${'─'.repeat(42)}`)];
     }
 
     // Inside code block — show dimmed with a gutter
@@ -47,32 +47,35 @@ export class MarkdownRenderer {
     if (headerMatch) {
       const level = headerMatch[1].length;
       const text = renderInline(headerMatch[2]);
-      if (level === 1) return [...flushed, "\n" + chalk.bold.underline(text)];
-      if (level === 2) return [...flushed, "\n" + chalk.bold(text)];
+      if (level === 1) return [...flushed, '\n' + chalk.bold.underline(text)];
+      if (level === 2) return [...flushed, '\n' + chalk.bold(text)];
       return [...flushed, chalk.bold(text)];
     }
 
     // Horizontal rule: --- / *** / ___
     if (/^\s*[-*_]{3,}\s*$/.test(line)) {
-      return [...flushed, chalk.dim("─".repeat(40))];
+      return [...flushed, chalk.dim('─'.repeat(40))];
     }
 
     // Blockquote: > text
     const bqMatch = line.match(/^>\s?(.*)/);
     if (bqMatch) {
-      return [...flushed, chalk.dim("  │ ") + renderInline(bqMatch[1])];
+      return [...flushed, chalk.dim('  │ ') + renderInline(bqMatch[1])];
     }
 
     // Unordered list item: - / * / + followed by space
     const ulMatch = line.match(/^(\s*)[-*+]\s+(.*)/);
     if (ulMatch) {
-      return [...flushed, `${ulMatch[1]}  ${chalk.dim("•")} ${renderInline(ulMatch[2])}`];
+      return [...flushed, `${ulMatch[1]}  ${chalk.dim('•')} ${renderInline(ulMatch[2])}`];
     }
 
     // Ordered list item: 1. text
     const olMatch = line.match(/^(\s*)(\d+)\.\s+(.*)/);
     if (olMatch) {
-      return [...flushed, `${olMatch[1]}  ${chalk.dim(olMatch[2] + ".")} ${renderInline(olMatch[3])}`];
+      return [
+        ...flushed,
+        `${olMatch[1]}  ${chalk.dim(olMatch[2] + '.')} ${renderInline(olMatch[3])}`,
+      ];
     }
 
     // Regular line — just apply inline formatting
@@ -105,9 +108,12 @@ function isSeparatorRow(line: string): boolean {
 }
 
 function parseCells(line: string): string[] {
-  const cells = line.trim().split("|").map((c) => c.trim());
-  if (cells.length > 0 && cells[0] === "") cells.shift();
-  if (cells.length > 0 && cells[cells.length - 1] === "") cells.pop();
+  const cells = line
+    .trim()
+    .split('|')
+    .map((c) => c.trim());
+  if (cells.length > 0 && cells[0] === '') cells.shift();
+  if (cells.length > 0 && cells[cells.length - 1] === '') cells.pop();
   return cells;
 }
 
@@ -125,7 +131,7 @@ function renderTable(bufferedLines: string[]): string[] {
   // Normalise column count
   const maxCols = Math.max(...rows.map((r) => r.length));
   for (const row of rows) {
-    while (row.length < maxCols) row.push("");
+    while (row.length < maxCols) row.push('');
   }
 
   // Calculate column widths, capped at 30 visible chars
@@ -139,14 +145,14 @@ function renderTable(bufferedLines: string[]): string[] {
 
   const dim = chalk.dim;
   const pad = (s: string, w: number): string => {
-    if (s.length > w) return s.slice(0, w - 1) + "…";
+    if (s.length > w) return s.slice(0, w - 1) + '…';
     return s.padEnd(w);
   };
 
   const out: string[] = [];
 
   // Top border: ┌──┬──┐
-  out.push(dim("  ┌" + colW.map((w) => "─".repeat(w + 2)).join("┬") + "┐"));
+  out.push(dim('  ┌' + colW.map((w) => '─'.repeat(w + 2)).join('┬') + '┐'));
 
   for (let i = 0; i < rows.length; i++) {
     const cells = rows[i].map((c, j) => {
@@ -154,16 +160,16 @@ function renderTable(bufferedLines: string[]): string[] {
       // First row is the header — render bold
       return i === 0 ? chalk.bold(content) : renderInline(content);
     });
-    out.push(dim("  │") + cells.map((c) => ` ${c} `).join(dim("│")) + dim("│"));
+    out.push(dim('  │') + cells.map((c) => ` ${c} `).join(dim('│')) + dim('│'));
 
     // Separator after header: ├──┼──┤
     if (i === 0) {
-      out.push(dim("  ├" + colW.map((w) => "─".repeat(w + 2)).join("┼") + "┤"));
+      out.push(dim('  ├' + colW.map((w) => '─'.repeat(w + 2)).join('┼') + '┤'));
     }
   }
 
   // Bottom border: └──┴──┘
-  out.push(dim("  └" + colW.map((w) => "─".repeat(w + 2)).join("┴") + "┘"));
+  out.push(dim('  └' + colW.map((w) => '─'.repeat(w + 2)).join('┴') + '┘'));
 
   return out;
 }
@@ -191,6 +197,7 @@ function renderInline(text: string): string {
   text = text.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, (_, p1) => chalk.italic(p1));
 
   // Restore protected code spans
+  // eslint-disable-next-line no-control-regex
   text = text.replace(/\x00C(\d+)\x00/g, (_, idx) => codeSpans[parseInt(idx)]);
 
   return text;

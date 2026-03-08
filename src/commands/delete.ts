@@ -1,10 +1,10 @@
-import { deleteSession, getSession, listSessions } from "../session/manager.js";
+import { deleteSession, getSession, listSessions } from '../session/manager.js';
 
 export async function handleDelete(sessionId: string): Promise<void> {
-  if (sessionId === "--all" || sessionId === "-all") {
+  if (sessionId === '--all' || sessionId === '-all') {
     const all = listSessions();
     if (all.length === 0) {
-      console.log("No sessions to delete.");
+      console.log('No sessions to delete.');
       return;
     }
     const errors: string[] = [];
@@ -18,7 +18,7 @@ export async function handleDelete(sessionId: string): Promise<void> {
     const deleted = all.length - errors.length;
     console.log(`Deleted ${deleted} of ${all.length} sessions.`);
     if (errors.length > 0) {
-      console.error(`Failed to delete:\n${errors.map(e => `  ${e}`).join("\n")}`);
+      console.error(`Failed to delete:\n${errors.map((e) => `  ${e}`).join('\n')}`);
     }
     return;
   }

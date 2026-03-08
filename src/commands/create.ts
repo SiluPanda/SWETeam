@@ -1,5 +1,5 @@
-import { createSession } from "../session/manager.js";
-import { isGitRepo, getRepoRoot } from "../git/git.js";
+import { createSession } from '../session/manager.js';
+import { isGitRepo, getRepoRoot } from '../git/git.js';
 
 export interface CreateResult {
   id: string;
@@ -19,8 +19,8 @@ export async function handleCreate(repoInput?: string): Promise<CreateResult | n
       const cwd = process.cwd();
       if (!isGitRepo(cwd)) {
         console.error(
-          "Current directory is not a git repository.\n" +
-            "Run `git init` first, or pass a repo: /create <repo>",
+          'Current directory is not a git repository.\n' +
+            'Run `git init` first, or pass a repo: /create <repo>',
         );
         return null;
       }

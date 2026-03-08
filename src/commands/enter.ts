@@ -1,7 +1,7 @@
-import { getSession, getMessages } from "../session/manager.js";
-import { tasks } from "../db/schema.js";
-import { getDb } from "../db/client.js";
-import { eq } from "drizzle-orm";
+import { getSession, getMessages } from '../session/manager.js';
+import { tasks } from '../db/schema.js';
+import { getDb } from '../db/client.js';
+import { eq } from 'drizzle-orm';
 
 export interface SessionSummary {
   id: string;
@@ -33,7 +33,7 @@ export function buildSessionSummary(sessionId: string): SessionSummary | null {
     .all();
 
   const tasksTotal = taskRows.length;
-  const tasksDone = taskRows.filter((t) => t.status === "done").length;
+  const tasksDone = taskRows.filter((t) => t.status === 'done').length;
 
   const recentMessages = getMessages(sessionId, 10);
 
@@ -76,19 +76,16 @@ export function formatSummary(summary: SessionSummary): string {
   }
 
   if (summary.recentMessages.length > 0) {
-    lines.push("");
-    lines.push("Recent messages:");
+    lines.push('');
+    lines.push('Recent messages:');
     for (const msg of summary.recentMessages) {
       const prefix = `[${msg.role}]`;
-      const truncated =
-        msg.content.length > 80
-          ? msg.content.slice(0, 77) + "..."
-          : msg.content;
+      const truncated = msg.content.length > 80 ? msg.content.slice(0, 77) + '...' : msg.content;
       lines.push(`  ${prefix.padEnd(10)} ${truncated}`);
     }
   }
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 export async function handleEnter(sessionId: string): Promise<void> {

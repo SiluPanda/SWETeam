@@ -1,21 +1,28 @@
-import { eq, and } from "drizzle-orm";
-import { nanoid } from "nanoid";
-import { getDb } from "../db/client.js";
-import { iterations, sessions, tasks as tasksTable } from "../db/schema.js";
-import { transition } from "../session/state-machine.js";
-import { addMessage, getSession } from "../session/manager.js";
-import { resolveAdapter } from "../adapters/adapter.js";
-import { loadConfig } from "../config/loader.js";
+import { eq, and } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import { getDb } from '../db/client.js';
+import { iterations, sessions, tasks as tasksTable } from '../db/schema.js';
+import { transition } from '../session/state-machine.js';
+import { addMessage, getSession } from '../session/manager.js';
+import { resolveAdapter } from '../adapters/adapter.js';
+import { loadConfig } from '../config/loader.js';
 import {
   getTasksForSession,
   insertTasksFromPlan,
   runOrchestrator,
   scopeTaskId,
   type OrchestratorCallbacks,
-} from "./orchestrator.js";
-import { pushBranch, createPR, getDefaultBranch, git, deleteBranches, cleanupWorktrees } from "../git/git.js";
-import { runParallelOrchestrator } from "./parallel-runner.js";
-import { clearLog, writeEvent } from "../session/agent-log.js";
+} from './orchestrator.js';
+import {
+  pushBranch,
+  createPR,
+  getDefaultBranch,
+  git,
+  deleteBranches,
+  cleanupWorktrees,
+} from '../git/git.js';
+import { runParallelOrchestrator } from './parallel-runner.js';
+import { clearLog, writeEvent } from '../session/agent-log.js';
 
 export interface PlanDelta {
   modifiedTasks: Array<{ id: string; changes: string }>;
@@ -49,19 +56,19 @@ export function buildFeedbackPrompt(
   const tasksSummary = allTasks
     .map(
       (t) =>
-        `- ${t.id} [${t.status}]: ${t.title}\n  ${t.description}${t.diffPatch ? `\n  Diff: ${t.diffPatch.slice(0, 500)}` : ""}`,
+        `- ${t.id} [${t.status}]: ${t.title}\n  ${t.description}${t.diffPatch ? `\n  Diff: ${t.diffPatch.slice(0, 500)}` : ''}`,
     )
-    .join("\n");
+    .join('\n');
 
   const historyText =
     iterationHistory.length > 0
       ? iterationHistory
           .map(
             (i) =>
-              `Iteration ${i.iterationNumber}: ${i.feedback}${i.planDelta ? `\nDelta: ${i.planDelta}` : ""}`,
+              `Iteration ${i.iterationNumber}: ${i.feedback}${i.planDelta ? `\nDelta: ${i.planDelta}` : ''}`,
           )
-          .join("\n\n")
-      : "(first iteration)";
+          .join('\n\n')
+      : '(first iteration)';
 
   return `The user has reviewed the PR and has feedback. Determine what needs to change.
 
@@ -96,42 +103,33 @@ export function parsePlanDelta(output: string): PlanDelta {
   try {
     const parsed = JSON.parse(jsonStr.trim());
     return {
-      modifiedTasks: Array.isArray(parsed.modified_tasks)
-        ? parsed.modified_tasks
-        : [],
+      modifiedTasks: Array.isArray(parsed.modified_tasks) ? parsed.modified_tasks : [],
       newTasks: Array.isArray(parsed.new_tasks)
-        ? parsed.new_tasks.map(
-            (t: Record<string, unknown>) => ({
-              id: String(t.id ?? `task-${nanoid(4)}`),
-              title: String(t.title ?? ""),
-              description: String(t.description ?? ""),
-              filesLikelyTouched: Array.isArray(t.files_likely_touched)
-                ? t.files_likely_touched.map(String)
-                : [],
-              dependsOn: Array.isArray(t.depends_on)
-                ? t.depends_on.map(String)
-                : [],
-              acceptanceCriteria: Array.isArray(t.acceptance_criteria)
-                ? t.acceptance_criteria.map(String)
-                : [],
-            }),
-          )
+        ? parsed.new_tasks.map((t: Record<string, unknown>) => ({
+            id: String(t.id ?? `task-${nanoid(4)}`),
+            title: String(t.title ?? ''),
+            description: String(t.description ?? ''),
+            filesLikelyTouched: Array.isArray(t.files_likely_touched)
+              ? t.files_likely_touched.map(String)
+              : [],
+            dependsOn: Array.isArray(t.depends_on) ? t.depends_on.map(String) : [],
+            acceptanceCriteria: Array.isArray(t.acceptance_criteria)
+              ? t.acceptance_criteria.map(String)
+              : [],
+          }))
         : [],
-      summary: String(parsed.summary ?? ""),
+      summary: String(parsed.summary ?? ''),
     };
   } catch {
     return {
       modifiedTasks: [],
       newTasks: [],
-      summary: "Could not parse plan delta from agent response.",
+      summary: 'Could not parse plan delta from agent response.',
     };
   }
 }
 
-export function applyPlanDelta(
-  sessionId: string,
-  delta: PlanDelta,
-): void {
+export function applyPlanDelta(sessionId: string, delta: PlanDelta): void {
   const db = getDb();
 
   // Re-queue modified tasks — append changes to existing description
@@ -143,14 +141,14 @@ export function applyPlanDelta(
       .from(tasksTable)
       .where(eq(tasksTable.id, dbId))
       .all();
-    const existingDesc = existing.length > 0 ? existing[0].description : "";
+    const existingDesc = existing.length > 0 ? existing[0].description : '';
     const updatedDesc = existingDesc
       ? `${existingDesc}\n\n--- Feedback Changes ---\n${mod.changes}`
       : mod.changes;
 
     db.update(tasksTable)
       .set({
-        status: "queued",
+        status: 'queued',
         description: updatedDesc,
         reviewVerdict: null,
         reviewIssues: null,
@@ -171,7 +169,7 @@ export function applyPlanDelta(
 
     insertTasksFromPlan(
       sessionId,
-      delta.newTasks.map((t, i) => ({
+      delta.newTasks.map((t) => ({
         ...t,
       })),
       maxOrder,
@@ -194,9 +192,7 @@ export function createIteration(
     .all();
 
   const nextNumber =
-    existing.length > 0
-      ? Math.max(...existing.map((i) => i.iterationNumber)) + 1
-      : 1;
+    existing.length > 0 ? Math.max(...existing.map((i) => i.iterationNumber)) + 1 : 1;
 
   db.insert(iterations)
     .values({
@@ -205,7 +201,7 @@ export function createIteration(
       iterationNumber: nextNumber,
       feedback: feedbackText,
       planDelta: planDelta ? JSON.stringify(planDelta) : null,
-      status: "building",
+      status: 'building',
       createdAt: new Date(),
     })
     .run();
@@ -227,19 +223,16 @@ export function getIterationHistory(sessionId: string) {
     .all();
 }
 
-export async function handleFeedback(
-  sessionId: string,
-  feedbackText: string,
-): Promise<void> {
+export async function handleFeedback(sessionId: string, feedbackText: string): Promise<void> {
   const config = loadConfig();
   const session = getSession(sessionId);
   if (!session) throw new Error(`Session not found: ${sessionId}`);
 
   // Store feedback
-  addMessage(sessionId, "user", feedbackText, { type: "feedback" });
+  addMessage(sessionId, 'user', feedbackText, { type: 'feedback' });
 
   // Transition to iterating
-  transition(sessionId, "iterating");
+  transition(sessionId, 'iterating');
 
   // Get current state
   const db = getDb();
@@ -257,7 +250,7 @@ export async function handleFeedback(
 
   // If all tasks are still queued (build never ran), skip the planner delta
   // and just re-run the orchestrator directly
-  const allQueued = allTasks.length > 0 && allTasks.every((t) => t.status === "queued");
+  const allQueued = allTasks.length > 0 && allTasks.every((t) => t.status === 'queued');
 
   // Clear log file so watchers from other processes start fresh
   clearLog(sessionId);
@@ -269,32 +262,42 @@ export async function handleFeedback(
 
     // Build feedback prompt and invoke planner
     const prompt = buildFeedbackPrompt(
-      session.planJson ?? "{}",
+      session.planJson ?? '{}',
       allTasks,
       feedbackText,
       iterHistory,
     );
 
     // Planner phase
-    const plannerId = "planner-1";
-    writeEvent(sessionId, { type: "agent-start", id: plannerId, role: "Planner", taskId: sessionId, title: "Analyzing feedback" });
+    const plannerId = 'planner-1';
+    writeEvent(sessionId, {
+      type: 'agent-start',
+      id: plannerId,
+      role: 'Planner',
+      taskId: sessionId,
+      title: 'Analyzing feedback',
+    });
     agentCounter++;
     const adapter = resolveAdapter(config.roles.planner, config);
     let result: { output: string };
     try {
       result = await adapter.execute({
         prompt,
-        cwd: session.repoLocalPath ?? ".",
+        cwd: session.repoLocalPath ?? '.',
         timeout: 0,
         onOutput: (chunk: string) => {
-          writeEvent(sessionId, { type: "output", id: plannerId, chunk });
+          writeEvent(sessionId, { type: 'output', id: plannerId, chunk });
         },
       });
-      writeEvent(sessionId, { type: "agent-end", id: plannerId, success: true });
+      writeEvent(sessionId, { type: 'agent-end', id: plannerId, success: true });
     } catch (plannerErr) {
-      writeEvent(sessionId, { type: "agent-end", id: plannerId, success: false });
+      writeEvent(sessionId, { type: 'agent-end', id: plannerId, success: false });
       // Restore session to awaiting_feedback so the user can retry
-      try { transition(sessionId, "awaiting_feedback"); } catch { /* may already be transitioned */ }
+      try {
+        transition(sessionId, 'awaiting_feedback');
+      } catch {
+        /* may already be transitioned */
+      }
       throw plannerErr;
     }
 
@@ -306,15 +309,15 @@ export async function handleFeedback(
 
     addMessage(
       sessionId,
-      "system",
+      'system',
       `Iteration ${iterNum}: ${delta.summary}\nModified: ${delta.modifiedTasks.length} tasks, New: ${delta.newTasks.length} tasks`,
     );
 
     // Apply delta
     applyPlanDelta(sessionId, delta);
   } else {
-    addMessage(sessionId, "system", "Build was interrupted — retrying all tasks...");
-    console.log("Build was interrupted — retrying all tasks...\n");
+    addMessage(sessionId, 'system', 'Build was interrupted — retrying all tasks...');
+    console.log('Build was interrupted — retrying all tasks...\n');
   }
 
   // Re-queue any tasks still in failed/blocked state so the orchestrator retries them.
@@ -322,10 +325,10 @@ export async function handleFeedback(
   {
     const remainingTasks = getTasksForSession(sessionId);
     for (const t of remainingTasks) {
-      if (t.status === "failed" || t.status === "blocked") {
+      if (t.status === 'failed' || t.status === 'blocked') {
         db.update(tasksTable)
           .set({
-            status: "queued",
+            status: 'queued',
             reviewVerdict: null,
             reviewIssues: null,
             reviewCycles: 0,
@@ -346,7 +349,7 @@ export async function handleFeedback(
 
   // Ensure we're on the session branch before running
   try {
-    git(["checkout", sessionBranch], repoPath);
+    git(['checkout', sessionBranch], repoPath);
   } catch {
     // May already be on it
   }
@@ -364,29 +367,45 @@ export async function handleFeedback(
     onAgentStart: (taskId, taskTitle, role) => {
       const id = `${role.toLowerCase()}-${++agentCounter}`;
       activeAgentIds.set(`${taskId}:${role}`, id);
-      writeEvent(sessionId, { type: "agent-start", id, role, taskId, title: taskTitle });
+      writeEvent(sessionId, { type: 'agent-start', id, role, taskId, title: taskTitle });
     },
     onAgentOutput: (taskId, role, chunk) => {
       const id = activeAgentIds.get(`${taskId}:${role}`) ?? `${role.toLowerCase()}-${agentCounter}`;
-      writeEvent(sessionId, { type: "output", id, chunk });
+      writeEvent(sessionId, { type: 'output', id, chunk });
     },
     onAgentEnd: (taskId, role, success) => {
       const id = activeAgentIds.get(`${taskId}:${role}`) ?? `${role.toLowerCase()}-${agentCounter}`;
-      writeEvent(sessionId, { type: "agent-end", id, success });
+      writeEvent(sessionId, { type: 'agent-end', id, success });
     },
     onInputNeeded: async (taskId, role, promptText) => {
       const requestId = `input-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      writeEvent(sessionId, { type: "input-needed", id: requestId, taskId, role, promptText, requestId });
-      const { waitForResponse } = await import("../session/agent-log.js");
+      writeEvent(sessionId, {
+        type: 'input-needed',
+        id: requestId,
+        taskId,
+        role,
+        promptText,
+        requestId,
+      });
+      const { waitForResponse } = await import('../session/agent-log.js');
       return waitForResponse(sessionId, requestId);
     },
   };
 
   // Clean up stale worktrees from previous iterations
-  const { join } = await import("path");
-  const { homedir } = await import("os");
-  const sessionWtDir = join(homedir(), ".sweteam", "worktrees", session.id.replace(/[^a-zA-Z0-9_-]/g, "-"));
-  try { cleanupWorktrees(sessionWtDir, repoPath); } catch { /* best effort */ }
+  const { join } = await import('path');
+  const { homedir } = await import('os');
+  const sessionWtDir = join(
+    homedir(),
+    '.sweteam',
+    'worktrees',
+    session.id.replace(/[^a-zA-Z0-9_-]/g, '-'),
+  );
+  try {
+    cleanupWorktrees(sessionWtDir, repoPath);
+  } catch {
+    /* best effort */
+  }
 
   const useParallel = config.execution.max_parallel > 1;
   try {
@@ -396,11 +415,15 @@ export async function handleFeedback(
       await runOrchestrator(sessionId, repoPath, sessionBranch, callbacks);
     }
   } catch (err) {
-    writeEvent(sessionId, { type: "build-complete", id: "build" });
-    try { transition(sessionId, "awaiting_feedback"); } catch { /* already transitioned */ }
+    writeEvent(sessionId, { type: 'build-complete', id: 'build' });
+    try {
+      transition(sessionId, 'awaiting_feedback');
+    } catch {
+      /* already transitioned */
+    }
     throw err;
   }
-  writeEvent(sessionId, { type: "build-complete", id: "build" });
+  writeEvent(sessionId, { type: 'build-complete', id: 'build' });
 
   // Push and create/update PR
   try {
@@ -411,47 +434,49 @@ export async function handleFeedback(
     if (!updatedSession?.prUrl) {
       try {
         const baseBranch = getDefaultBranch(repoPath);
-        const prUrl = createPR(session.goal ?? "sweteam iteration", "", baseBranch, sessionBranch, repoPath);
+        const prUrl = createPR(
+          session.goal ?? 'sweteam iteration',
+          '',
+          baseBranch,
+          sessionBranch,
+          repoPath,
+        );
         const prMatch = prUrl.match(/\/pull\/(\d+)/);
         const prNumber = prMatch ? parseInt(prMatch[1], 10) : null;
         db.update(sessions)
           .set({ prUrl, prNumber, updatedAt: new Date() })
           .where(eq(sessions.id, sessionId))
           .run();
-        addMessage(sessionId, "system", `PR created: ${prUrl}`);
+        addMessage(sessionId, 'system', `PR created: ${prUrl}`);
       } catch (prErr) {
         const prMsg = prErr instanceof Error ? prErr.message : String(prErr);
-        addMessage(sessionId, "system", `Failed to create PR: ${prMsg}`);
+        addMessage(sessionId, 'system', `Failed to create PR: ${prMsg}`);
       }
     }
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
-    addMessage(sessionId, "system", `Failed to push: ${errMsg}`);
+    addMessage(sessionId, 'system', `Failed to push: ${errMsg}`);
   }
 
   // Transition back (may fail if session was stopped during iteration)
   try {
-    transition(sessionId, "awaiting_feedback");
+    transition(sessionId, 'awaiting_feedback');
   } catch {
     // Session may have been stopped — that's fine
   }
 
   if (!allQueued) {
     const latestIter = getIterationHistory(sessionId);
-    const latestNum = latestIter.length > 0 ? latestIter[latestIter.length - 1].iterationNumber : null;
+    const latestNum =
+      latestIter.length > 0 ? latestIter[latestIter.length - 1].iterationNumber : null;
     if (latestNum !== null) {
       db.update(iterations)
-        .set({ status: "done" })
-        .where(
-          and(
-            eq(iterations.sessionId, sessionId),
-            eq(iterations.iterationNumber, latestNum),
-          ),
-        )
+        .set({ status: 'done' })
+        .where(and(eq(iterations.sessionId, sessionId), eq(iterations.iterationNumber, latestNum)))
         .run();
     }
-    addMessage(sessionId, "system", `Iteration complete.`);
+    addMessage(sessionId, 'system', `Iteration complete.`);
   } else {
-    addMessage(sessionId, "system", "Build retry complete.");
+    addMessage(sessionId, 'system', 'Build retry complete.');
   }
 }

@@ -1,8 +1,8 @@
-import type { SweteamConfig } from "../config/loader.js";
-import { ClaudeCodeAdapter } from "./claude-code.js";
-import { CodexAdapter } from "./codex.js";
-import { OpenCodeAdapter } from "./opencode.js";
-import { CustomAdapter } from "./custom.js";
+import type { SweteamConfig } from '../config/loader.js';
+import { ClaudeCodeAdapter } from './claude-code.js';
+import { CodexAdapter } from './codex.js';
+import { OpenCodeAdapter } from './opencode.js';
+import { CustomAdapter } from './custom.js';
 
 export interface AgentResult {
   output: string;
@@ -26,15 +26,12 @@ export interface AgentAdapter {
 }
 
 const BUILTIN_ADAPTERS: Record<string, () => AgentAdapter> = {
-  "claude-code": () => new ClaudeCodeAdapter(),
+  'claude-code': () => new ClaudeCodeAdapter(),
   codex: () => new CodexAdapter(),
   opencode: () => new OpenCodeAdapter(),
 };
 
-export function resolveAdapter(
-  name: string,
-  config: SweteamConfig,
-): AgentAdapter {
+export function resolveAdapter(name: string, config: SweteamConfig): AgentAdapter {
   if (BUILTIN_ADAPTERS[name]) {
     return BUILTIN_ADAPTERS[name]();
   }

@@ -1,26 +1,18 @@
-import { eq } from "drizzle-orm";
-import { getDb } from "../db/client.js";
-import { sessions } from "../db/schema.js";
+import { eq } from 'drizzle-orm';
+import { getDb } from '../db/client.js';
+import { sessions } from '../db/schema.js';
 
-export type SessionStatus =
-  | "planning"
-  | "building"
-  | "awaiting_feedback"
-  | "iterating"
-  | "stopped";
+export type SessionStatus = 'planning' | 'building' | 'awaiting_feedback' | 'iterating' | 'stopped';
 
 const VALID_TRANSITIONS: Record<SessionStatus, SessionStatus[]> = {
-  planning: ["building", "stopped"],
-  building: ["awaiting_feedback", "planning", "stopped"],
-  awaiting_feedback: ["building", "iterating", "stopped"],
-  iterating: ["awaiting_feedback", "planning", "stopped"],
-  stopped: ["planning", "building", "iterating"],
+  planning: ['building', 'stopped'],
+  building: ['awaiting_feedback', 'planning', 'stopped'],
+  awaiting_feedback: ['building', 'iterating', 'stopped'],
+  iterating: ['awaiting_feedback', 'planning', 'stopped'],
+  stopped: ['planning', 'building', 'iterating'],
 };
 
-export function validateTransition(
-  from: SessionStatus,
-  to: SessionStatus,
-): boolean {
+export function validateTransition(from: SessionStatus, to: SessionStatus): boolean {
   const allowed = VALID_TRANSITIONS[from];
   return allowed !== undefined && allowed.includes(to);
 }
@@ -41,9 +33,7 @@ export function transition(sessionId: string, newStatus: SessionStatus): void {
   const currentStatus = rows[0].status as SessionStatus;
 
   if (!validateTransition(currentStatus, newStatus)) {
-    throw new Error(
-      `Invalid transition: ${currentStatus} → ${newStatus}`,
-    );
+    throw new Error(`Invalid transition: ${currentStatus} → ${newStatus}`);
   }
 
   const updates: Record<string, unknown> = {
@@ -51,9 +41,9 @@ export function transition(sessionId: string, newStatus: SessionStatus): void {
     updatedAt: new Date(),
   };
 
-  if (newStatus === "stopped") {
+  if (newStatus === 'stopped') {
     updates.stoppedAt = updates.updatedAt;
-  } else if (currentStatus === "stopped") {
+  } else if (currentStatus === 'stopped') {
     // Clear stoppedAt when leaving the stopped state
     updates.stoppedAt = null;
   }
@@ -61,11 +51,11 @@ export function transition(sessionId: string, newStatus: SessionStatus): void {
   db.update(sessions).set(updates).where(eq(sessions.id, sessionId)).run();
 
   const stateLabels: Record<string, string> = {
-    planning: "Planning",
-    building: "Building",
-    awaiting_feedback: "Awaiting feedback",
-    iterating: "Iterating",
-    stopped: "Stopped",
+    planning: 'Planning',
+    building: 'Building',
+    awaiting_feedback: 'Awaiting feedback',
+    iterating: 'Iterating',
+    stopped: 'Stopped',
   };
   const label = stateLabels[newStatus] ?? newStatus;
   console.log(`[${label}]`);

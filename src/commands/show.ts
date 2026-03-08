@@ -1,12 +1,9 @@
-import { eq } from "drizzle-orm";
-import { getDb } from "../db/client.js";
-import {
-  tasks as tasksTable,
-  iterations,
-} from "../db/schema.js";
-import { getSession, getMessages } from "../session/manager.js";
-import { relativeTime, formatDuration } from "../utils/time.js";
-import { displayTaskId } from "../orchestrator/orchestrator.js";
+import { eq } from 'drizzle-orm';
+import { getDb } from '../db/client.js';
+import { tasks as tasksTable, iterations } from '../db/schema.js';
+import { getSession, getMessages } from '../session/manager.js';
+import { relativeTime, formatDuration } from '../utils/time.js';
+import { displayTaskId } from '../orchestrator/orchestrator.js';
 
 export interface DetailedSessionView {
   id: string;
@@ -38,9 +35,7 @@ export interface DetailedSessionView {
   }>;
 }
 
-export function buildDetailedView(
-  sessionId: string,
-): DetailedSessionView | null {
+export function buildDetailedView(sessionId: string): DetailedSessionView | null {
   const session = getSession(sessionId);
   if (!session) return null;
 
@@ -69,7 +64,7 @@ export function buildDetailedView(
   const recentMessages = getMessages(sessionId, 10);
 
   const tasksTotal = taskRows.length;
-  const tasksDone = taskRows.filter((t) => t.status === "done").length;
+  const tasksDone = taskRows.filter((t) => t.status === 'done').length;
 
   return {
     id: session.id,
@@ -97,54 +92,44 @@ export function buildDetailedView(
 
 function taskIcon(status: string): string {
   switch (status) {
-    case "done":
-      return "✓";
-    case "running":
-      return "▶";
-    case "reviewing":
-      return "⟳";
-    case "fixing":
-      return "🔧";
-    case "failed":
-      return "✗";
-    case "blocked":
-      return "⊘";
+    case 'done':
+      return '✓';
+    case 'running':
+      return '▶';
+    case 'reviewing':
+      return '⟳';
+    case 'fixing':
+      return '🔧';
+    case 'failed':
+      return '✗';
+    case 'blocked':
+      return '⊘';
     default:
-      return "○";
+      return '○';
   }
 }
 
 export function formatDetailedView(view: DetailedSessionView): string {
   const lines: string[] = [];
 
-  lines.push(
-    "┌─────────────────────────────────────────────────────────────┐",
-  );
+  lines.push('┌─────────────────────────────────────────────────────────────┐');
   lines.push(`│  Session: ${view.id}`);
-  lines.push(
-    "├─────────────────────────────────────────────────────────────┤",
-  );
+  lines.push('├─────────────────────────────────────────────────────────────┤');
 
   lines.push(`│  Repo:     ${view.repo}`);
   lines.push(`│  Goal:     ${view.goal}`);
   lines.push(`│  Status:   ${view.status}`);
-  lines.push(`│  Branch:   ${view.workingBranch ?? "(none)"}`);
+  lines.push(`│  Branch:   ${view.workingBranch ?? '(none)'}`);
   if (view.prUrl) {
     lines.push(`│  PR:       #${view.prNumber} ${view.prUrl}`);
   }
-  lines.push(`│  Plan:     ${view.planReady ? "ready" : "not finalized"}`);
+  lines.push(`│  Plan:     ${view.planReady ? 'ready' : 'not finalized'}`);
 
-  lines.push("│");
-  lines.push(
-    `│  Created:  ${view.createdAt.toISOString()} (${relativeTime(view.createdAt)})`,
-  );
-  lines.push(
-    `│  Updated:  ${view.updatedAt.toISOString()} (${relativeTime(view.updatedAt)})`,
-  );
+  lines.push('│');
+  lines.push(`│  Created:  ${view.createdAt.toISOString()} (${relativeTime(view.createdAt)})`);
+  lines.push(`│  Updated:  ${view.updatedAt.toISOString()} (${relativeTime(view.updatedAt)})`);
   const endTime = view.stoppedAt ?? view.updatedAt;
-  lines.push(
-    `│  Elapsed:  ${formatDuration(view.createdAt, endTime)}`,
-  );
+  lines.push(`│  Elapsed:  ${formatDuration(view.createdAt, endTime)}`);
   if (view.stoppedAt) {
     lines.push(`│  Stopped:  ${view.stoppedAt.toISOString()}`);
   }
@@ -153,58 +138,40 @@ export function formatDetailedView(view: DetailedSessionView): string {
   }
 
   if (view.tasks.length > 0) {
-    lines.push("│");
-    lines.push(
-      "├─ Tasks ─────────────────────────────────────────────────────┤",
-    );
+    lines.push('│');
+    lines.push('├─ Tasks ─────────────────────────────────────────────────────┤');
 
-    const pct =
-      view.tasksTotal > 0
-        ? Math.round((view.tasksDone / view.tasksTotal) * 100)
-        : 0;
+    const pct = view.tasksTotal > 0 ? Math.round((view.tasksDone / view.tasksTotal) * 100) : 0;
     const filled = Math.floor(pct / 5);
-    const bar = "█".repeat(filled) + "░".repeat(20 - filled);
-    lines.push(
-      `│  Progress: [${bar}] ${pct}% (${view.tasksDone}/${view.tasksTotal})`,
-    );
-    lines.push("│");
+    const bar = '█'.repeat(filled) + '░'.repeat(20 - filled);
+    lines.push(`│  Progress: [${bar}] ${pct}% (${view.tasksDone}/${view.tasksTotal})`);
+    lines.push('│');
 
     for (const task of view.tasks) {
       const icon = taskIcon(task.status);
       const review = task.reviewVerdict
         ? ` (review: ${task.reviewVerdict}, cycles: ${task.reviewCycles})`
-        : "";
-      lines.push(
-        `│  ${icon} ${displayTaskId(task.id)}: ${task.title} [${task.status}]${review}`,
-      );
+        : '';
+      lines.push(`│  ${icon} ${displayTaskId(task.id)}: ${task.title} [${task.status}]${review}`);
     }
   } else {
-    lines.push("│");
-    lines.push("│  No tasks yet. Finalize the plan and type @build.");
+    lines.push('│');
+    lines.push('│  No tasks yet. Finalize the plan and type @build.');
   }
 
   if (view.recentMessages.length > 0) {
-    lines.push("│");
-    lines.push(
-      "├─ Recent Activity ───────────────────────────────────────────┤",
-    );
+    lines.push('│');
+    lines.push('├─ Recent Activity ───────────────────────────────────────────┤');
     for (const msg of view.recentMessages.slice(-5)) {
       const prefix = `[${msg.role}]`;
-      const when = msg.createdAt ? relativeTime(msg.createdAt) : "";
-      const truncated =
-        msg.content.length > 60
-          ? msg.content.slice(0, 57) + "..."
-          : msg.content;
-      lines.push(
-        `│  ${when.padEnd(10)} ${prefix.padEnd(10)} ${truncated}`,
-      );
+      const when = msg.createdAt ? relativeTime(msg.createdAt) : '';
+      const truncated = msg.content.length > 60 ? msg.content.slice(0, 57) + '...' : msg.content;
+      lines.push(`│  ${when.padEnd(10)} ${prefix.padEnd(10)} ${truncated}`);
     }
   }
 
-  lines.push(
-    "└─────────────────────────────────────────────────────────────┘",
-  );
-  return lines.join("\n");
+  lines.push('└─────────────────────────────────────────────────────────────┘');
+  return lines.join('\n');
 }
 
 export async function handleShow(sessionId: string): Promise<void> {

@@ -34,15 +34,15 @@ sweteam is a terminal-based orchestrator that turns a high-level coding goal int
 
 ## 2. Core Principles
 
-| Principle | What it means |
-|---|---|
-| **Session-first** | Every interaction lives inside a persistent session with full history |
-| **Zero config by default** | Discovers installed CLIs, uses their existing auth/config |
-| **Human-in-the-loop for planning** | Interactive chat to finalize the plan, then hands-off for building |
-| **Continuous feedback** | Session doesn't end at PR — user can keep giving feedback and agents iterate |
-| **Parallel execution** | Independent tasks run concurrently across multiple agent instances |
-| **Git CLI native** | All git operations via `git` and `gh` CLI directly — no abstractions |
-| **Fail-safe** | Stuck task → isolate, continue others, escalate to user in session |
+| Principle                          | What it means                                                                |
+| ---------------------------------- | ---------------------------------------------------------------------------- |
+| **Session-first**                  | Every interaction lives inside a persistent session with full history        |
+| **Zero config by default**         | Discovers installed CLIs, uses their existing auth/config                    |
+| **Human-in-the-loop for planning** | Interactive chat to finalize the plan, then hands-off for building           |
+| **Continuous feedback**            | Session doesn't end at PR — user can keep giving feedback and agents iterate |
+| **Parallel execution**             | Independent tasks run concurrently across multiple agent instances           |
+| **Git CLI native**                 | All git operations via `git` and `gh` CLI directly — no abstractions         |
+| **Fail-safe**                      | Stuck task → isolate, continue others, escalate to user in session           |
 
 ---
 
@@ -90,68 +90,74 @@ sweteam is a terminal-based orchestrator that turns a high-level coding goal int
 
 ```typescript
 // db/schema.ts
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 
 // ─── Sessions ───────────────────────────────────────────
-export const sessions = sqliteTable("sessions", {
-  id: text("id").primaryKey(),                    // nanoid, e.g. "s_a1b2c3d4"
-  repo: text("repo").notNull(),                   // fully qualified: "SiluPanda/weav"
-  repoLocalPath: text("repo_local_path"),         // local clone path
-  goal: text("goal").notNull(),                   // original user goal
-  status: text("status").notNull(),               // planning | building | awaiting_feedback | iterating | stopped
-  planJson: text("plan_json"),                    // the finalized plan (JSON string)
-  prUrl: text("pr_url"),                          // github PR link once created
-  prNumber: integer("pr_number"),                 // PR number
-  workingBranch: text("working_branch"),          // e.g. "sw/s_a1b2c3d4-dark-theme"
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
-  stoppedAt: integer("stopped_at", { mode: "timestamp" }),
+export const sessions = sqliteTable('sessions', {
+  id: text('id').primaryKey(), // nanoid, e.g. "s_a1b2c3d4"
+  repo: text('repo').notNull(), // fully qualified: "SiluPanda/weav"
+  repoLocalPath: text('repo_local_path'), // local clone path
+  goal: text('goal').notNull(), // original user goal
+  status: text('status').notNull(), // planning | building | awaiting_feedback | iterating | stopped
+  planJson: text('plan_json'), // the finalized plan (JSON string)
+  prUrl: text('pr_url'), // github PR link once created
+  prNumber: integer('pr_number'), // PR number
+  workingBranch: text('working_branch'), // e.g. "sw/s_a1b2c3d4-dark-theme"
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  stoppedAt: integer('stopped_at', { mode: 'timestamp' }),
 });
 
 // ─── Chat Messages ──────────────────────────────────────
 // Full conversation history: user messages, agent responses,
 // system events, and feedback — all in one ordered stream.
-export const messages = sqliteTable("messages", {
-  id: text("id").primaryKey(),                    // nanoid
-  sessionId: text("session_id").notNull().references(() => sessions.id, { onDelete: "cascade" }),
-  role: text("role").notNull(),                   // user | agent | system
-  content: text("content").notNull(),             // message text
-  metadata: text("metadata"),                     // JSON: { agent: "claude-code", phase: "planning" } etc.
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+export const messages = sqliteTable('messages', {
+  id: text('id').primaryKey(), // nanoid
+  sessionId: text('session_id')
+    .notNull()
+    .references(() => sessions.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(), // user | agent | system
+  content: text('content').notNull(), // message text
+  metadata: text('metadata'), // JSON: { agent: "claude-code", phase: "planning" } etc.
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
 // ─── Tasks ──────────────────────────────────────────────
 // Individual coding tasks decomposed from the plan.
-export const tasks = sqliteTable("tasks", {
-  id: text("id").primaryKey(),                    // e.g. "task-001"
-  sessionId: text("session_id").notNull().references(() => sessions.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  status: text("status").notNull(),               // queued | running | reviewing | fixing | done | failed | blocked
-  dependsOn: text("depends_on"),                  // JSON array of task IDs
-  filesLikelyTouched: text("files_likely_touched"), // JSON array
-  acceptanceCriteria: text("acceptance_criteria"),   // JSON array
-  branchName: text("branch_name"),                // e.g. "sw/task-001-oauth-config"
-  reviewVerdict: text("review_verdict"),           // approve | request_changes
-  reviewIssues: text("review_issues"),             // JSON array of review issues
-  reviewCycles: integer("review_cycles").default(0),
-  diffPatch: text("diff_patch"),                  // stored diff after completion
-  agentOutput: text("agent_output"),              // full agent response
-  order: integer("order").notNull(),              // execution order
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+export const tasks = sqliteTable('tasks', {
+  id: text('id').primaryKey(), // e.g. "task-001"
+  sessionId: text('session_id')
+    .notNull()
+    .references(() => sessions.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  status: text('status').notNull(), // queued | running | reviewing | fixing | done | failed | blocked
+  dependsOn: text('depends_on'), // JSON array of task IDs
+  filesLikelyTouched: text('files_likely_touched'), // JSON array
+  acceptanceCriteria: text('acceptance_criteria'), // JSON array
+  branchName: text('branch_name'), // e.g. "sw/task-001-oauth-config"
+  reviewVerdict: text('review_verdict'), // approve | request_changes
+  reviewIssues: text('review_issues'), // JSON array of review issues
+  reviewCycles: integer('review_cycles').default(0),
+  diffPatch: text('diff_patch'), // stored diff after completion
+  agentOutput: text('agent_output'), // full agent response
+  order: integer('order').notNull(), // execution order
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
 // ─── Feedback Iterations ────────────────────────────────
 // When user gives feedback after a build, each round is tracked.
-export const iterations = sqliteTable("iterations", {
-  id: text("id").primaryKey(),                    // nanoid
-  sessionId: text("session_id").notNull().references(() => sessions.id, { onDelete: "cascade" }),
-  iterationNumber: integer("iteration_number").notNull(),
-  feedback: text("feedback").notNull(),           // user's feedback text
-  planDelta: text("plan_delta"),                  // what changed in the plan (JSON)
-  status: text("status").notNull(),               // planning | building | done | failed
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+export const iterations = sqliteTable('iterations', {
+  id: text('id').primaryKey(), // nanoid
+  sessionId: text('session_id')
+    .notNull()
+    .references(() => sessions.id, { onDelete: 'cascade' }),
+  iterationNumber: integer('iteration_number').notNull(),
+  feedback: text('feedback').notNull(), // user's feedback text
+  planDelta: text('plan_delta'), // what changed in the plan (JSON)
+  status: text('status').notNull(), // planning | building | done | failed
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 ```
 
@@ -586,10 +592,10 @@ interface AgentAdapter {
 
 ```typescript
 // Claude Code adapter
-import { spawn } from "child_process";
+import { spawn } from 'child_process';
 
 class ClaudeCodeAdapter implements AgentAdapter {
-  name = "claude-code";
+  name = 'claude-code';
 
   async isAvailable(): Promise<boolean> {
     // spawn: which claude
@@ -597,9 +603,9 @@ class ClaudeCodeAdapter implements AgentAdapter {
   }
 
   async execute(opts): Promise<AgentResult> {
-    const proc = spawn("claude", ["-p", "--output-format", "json"], {
+    const proc = spawn('claude', ['-p', '--output-format', 'json'], {
       cwd: opts.cwd,
-      stdio: ["pipe", "pipe", "pipe"],
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
     proc.stdin.write(opts.prompt);
     proc.stdin.end();
@@ -626,14 +632,14 @@ All git operations are raw shell commands via `child_process.execSync` or `spawn
 
 ```typescript
 // git.ts — thin wrapper, every function is a CLI call
-import { execSync } from "child_process";
+import { execSync } from 'child_process';
 
 function git(args: string, cwd: string): string {
-  return execSync(`git ${args}`, { cwd, encoding: "utf-8" }).trim();
+  return execSync(`git ${args}`, { cwd, encoding: 'utf-8' }).trim();
 }
 
 function gh(args: string, cwd: string): string {
-  return execSync(`gh ${args}`, { cwd, encoding: "utf-8" }).trim();
+  return execSync(`gh ${args}`, { cwd, encoding: 'utf-8' }).trim();
 }
 
 // ─── Repo Resolution ───
@@ -641,12 +647,12 @@ function resolveRepo(input: string): string {
   // "weav" → get current user from `gh api user -q .login` → "SiluPanda/weav"
   // "SiluPanda/weav" → use as-is
   // "https://github.com/SiluPanda/weav" → parse to "SiluPanda/weav"
-  if (input.startsWith("https://")) {
+  if (input.startsWith('https://')) {
     const match = input.match(/github\.com\/([^/]+\/[^/]+)/);
-    return match ? match[1].replace(/\.git$/, "") : input;
+    return match ? match[1].replace(/\.git$/, '') : input;
   }
-  if (input.includes("/")) return input;
-  const user = gh("api user -q .login", ".");
+  if (input.includes('/')) return input;
+  const user = gh('api user -q .login', '.');
   return `${user}/${input}`;
 }
 
@@ -664,16 +670,16 @@ function squashMerge(source: string, target: string, msg: string, cwd: string) {
 
 // ─── Diff ───
 function getDiff(cwd: string): string {
-  return git("diff", cwd);
+  return git('diff', cwd);
 }
 
 function getStagedDiff(cwd: string): string {
-  return git("diff --cached", cwd);
+  return git('diff --cached', cwd);
 }
 
 // ─── Commit ───
 function commitAll(msg: string, cwd: string) {
-  git("add -A", cwd);
+  git('add -A', cwd);
   git(`commit -m "${msg}"`, cwd);
 }
 
@@ -727,16 +733,16 @@ function pushBranch(branch: string, cwd: string) {
 
 **Transitions:**
 
-| From | Trigger | To |
-|---|---|---|
-| (none) | `/create` | `planning` |
-| `planning` | `@build` | `building` |
-| `building` | all tasks complete | `awaiting_feedback` |
-| `building` | critical failure | `awaiting_feedback` (with escalation notes) |
-| `awaiting_feedback` | `@feedback` | `iterating` |
-| `iterating` | iteration complete | `awaiting_feedback` |
-| any | `/stop` | `stopped` |
-| `stopped` | `/enter` + `@build` or `@feedback` | resumes to `building` or `iterating` |
+| From                | Trigger                            | To                                          |
+| ------------------- | ---------------------------------- | ------------------------------------------- |
+| (none)              | `/create`                          | `planning`                                  |
+| `planning`          | `@build`                           | `building`                                  |
+| `building`          | all tasks complete                 | `awaiting_feedback`                         |
+| `building`          | critical failure                   | `awaiting_feedback` (with escalation notes) |
+| `awaiting_feedback` | `@feedback`                        | `iterating`                                 |
+| `iterating`         | iteration complete                 | `awaiting_feedback`                         |
+| any                 | `/stop`                            | `stopped`                                   |
+| `stopped`           | `/enter` + `@build` or `@feedback` | resumes to `building` or `iterating`        |
 
 ---
 
@@ -848,17 +854,17 @@ Respond with ONLY valid JSON — a plan delta:
 
 ## 12. Error Handling & Escalation
 
-| Scenario | Behavior |
-|---|---|
-| CLI not found | Error at startup, suggest `sweteam init` |
-| `gh` not authenticated | Error with: `run gh auth login first` |
-| Repo not found | Error with: `repo {repo} not found on GitHub` |
-| Agent times out | Retry once, then mark task failed |
-| Agent non-zero exit | Capture stderr, retry with error context, then escalate |
-| Review fails N times | Mark task escalated, continue others |
-| Merge conflict | Attempt auto-resolve via coder agent, escalate if still stuck |
-| All tasks escalated | Move to `awaiting_feedback` with failure report |
-| Dependency task failed | Downstream tasks → `blocked` |
+| Scenario               | Behavior                                                      |
+| ---------------------- | ------------------------------------------------------------- |
+| CLI not found          | Error at startup, suggest `sweteam init`                      |
+| `gh` not authenticated | Error with: `run gh auth login first`                         |
+| Repo not found         | Error with: `repo {repo} not found on GitHub`                 |
+| Agent times out        | Retry once, then mark task failed                             |
+| Agent non-zero exit    | Capture stderr, retry with error context, then escalate       |
+| Review fails N times   | Mark task escalated, continue others                          |
+| Merge conflict         | Attempt auto-resolve via coder agent, escalate if still stuck |
+| All tasks escalated    | Move to `awaiting_feedback` with failure report               |
+| Dependency task failed | Downstream tasks → `blocked`                                  |
 
 All errors are persisted as `system` messages in the session chat, so the user sees them when they `/enter`.
 
@@ -929,24 +935,25 @@ sweteam/
 
 ## 15. Tech Stack
 
-| Component | Choice | Why |
-|---|---|---|
-| Language | TypeScript (Node.js) | Same ecosystem as Claude Code, fast to iterate |
-| ORM | Drizzle | Type-safe, lightweight, great SQLite support |
-| Database | SQLite (via better-sqlite3) | Zero setup, local, perfect for CLI tool |
-| TUI | Ink (React for CLI) | Rich interactive UIs, chat interfaces |
-| Process mgmt | `child_process` (native) | No extra deps for spawning CLIs |
-| Git | `git` CLI directly | No abstraction layer, user's git config applies |
-| GitHub | `gh` CLI directly | Auth, PR creation, repo resolution |
-| Config | TOML via `@iarna/toml` | Standard for dev tools |
-| CLI framework | Commander.js or yargs | Command routing, flag parsing |
-| IDs | nanoid | Short, URL-safe, collision-resistant |
+| Component     | Choice                      | Why                                             |
+| ------------- | --------------------------- | ----------------------------------------------- |
+| Language      | TypeScript (Node.js)        | Same ecosystem as Claude Code, fast to iterate  |
+| ORM           | Drizzle                     | Type-safe, lightweight, great SQLite support    |
+| Database      | SQLite (via better-sqlite3) | Zero setup, local, perfect for CLI tool         |
+| TUI           | Ink (React for CLI)         | Rich interactive UIs, chat interfaces           |
+| Process mgmt  | `child_process` (native)    | No extra deps for spawning CLIs                 |
+| Git           | `git` CLI directly          | No abstraction layer, user's git config applies |
+| GitHub        | `gh` CLI directly           | Auth, PR creation, repo resolution              |
+| Config        | TOML via `@iarna/toml`      | Standard for dev tools                          |
+| CLI framework | Commander.js or yargs       | Command routing, flag parsing                   |
+| IDs           | nanoid                      | Short, URL-safe, collision-resistant            |
 
 ---
 
 ## 16. Implementation Plan
 
 ### Phase 1 — MVP
+
 1. Project scaffolding + Drizzle schema + migrations
 2. Config loader + CLI auto-discovery (`sweteam init`)
 3. Session manager: `/create`, `/list`, `/enter`, `/stop`, `/delete`
@@ -959,6 +966,7 @@ sweteam/
 10. Basic completion report
 
 ### Phase 2 — Feedback + Multi-CLI
+
 1. `@feedback` handler + iteration tracking
 2. Plan delta generation + incremental builds
 3. Codex and OpenCode adapters
@@ -966,6 +974,7 @@ sweteam/
 5. Merge conflict resolution
 
 ### Phase 3 — Parallel + Polish
+
 1. DAG-based parallel execution
 2. Full Ink TUI dashboard
 3. `@status`, `@diff`, `@tasks` commands
@@ -973,6 +982,7 @@ sweteam/
 5. Export session as markdown report
 
 ### Phase 4 — Advanced
+
 1. Test runner integration (run tests as part of review)
 2. LSP integration (type-check after generation)
 3. Cost tracking per session

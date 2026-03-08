@@ -1,16 +1,16 @@
-import { eq } from "drizzle-orm";
-import { getDb } from "../db/client.js";
-import { sessions, tasks as tasksTable } from "../db/schema.js";
-import { git, getDefaultBranch } from "../git/git.js";
-import { displayTaskId } from "../orchestrator/orchestrator.js";
+import { eq } from 'drizzle-orm';
+import { getDb } from '../db/client.js';
+import { sessions, tasks as tasksTable } from '../db/schema.js';
+import { git, getDefaultBranch } from '../git/git.js';
+import { displayTaskId } from '../orchestrator/orchestrator.js';
 
 // Human-readable labels for session statuses
 const STATE_LABELS: Record<string, string> = {
-  planning: "Planning",
-  building: "Building",
-  awaiting_feedback: "Awaiting feedback",
-  iterating: "Iterating",
-  stopped: "Stopped",
+  planning: 'Planning',
+  building: 'Building',
+  awaiting_feedback: 'Awaiting feedback',
+  iterating: 'Iterating',
+  stopped: 'Stopped',
 };
 
 // @status — Task progress with summary
@@ -32,7 +32,7 @@ export function getStatusDisplay(sessionId: string): string {
     if (s.goal) {
       headerLines.push(`Goal:    ${s.goal}`);
     }
-    headerLines.push("");
+    headerLines.push('');
   }
 
   const taskRows = db
@@ -47,7 +47,7 @@ export function getStatusDisplay(sessionId: string): string {
     .all();
 
   if (taskRows.length === 0) {
-    return headerLines.join("\n") + "No tasks yet. Finalize the plan and type @build.";
+    return headerLines.join('\n') + 'No tasks yet. Finalize the plan and type @build.';
   }
 
   const counts = {
@@ -60,7 +60,7 @@ export function getStatusDisplay(sessionId: string): string {
     blocked: 0,
   };
 
-  const lines: string[] = [...headerLines, "Task Status:"];
+  const lines: string[] = [...headerLines, 'Task Status:'];
 
   for (const task of taskRows) {
     const status = task.status as keyof typeof counts;
@@ -68,26 +68,26 @@ export function getStatusDisplay(sessionId: string): string {
 
     let icon: string;
     switch (task.status) {
-      case "done":
-        icon = "✓";
+      case 'done':
+        icon = '✓';
         break;
-      case "running":
-        icon = "▶";
+      case 'running':
+        icon = '▶';
         break;
-      case "reviewing":
-        icon = "⟳";
+      case 'reviewing':
+        icon = '⟳';
         break;
-      case "fixing":
-        icon = "🔧";
+      case 'fixing':
+        icon = '🔧';
         break;
-      case "failed":
-        icon = "✗";
+      case 'failed':
+        icon = '✗';
         break;
-      case "blocked":
-        icon = "⊘";
+      case 'blocked':
+        icon = '⊘';
         break;
       default:
-        icon = "○";
+        icon = '○';
     }
     lines.push(`  ${icon} ${displayTaskId(task.id)}  ${task.title}  [${task.status}]`);
   }
@@ -95,15 +95,15 @@ export function getStatusDisplay(sessionId: string): string {
   const total = taskRows.length;
   const doneCount = counts.done;
   const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
-  const bar = "█".repeat(Math.floor(pct / 5)) + "░".repeat(20 - Math.floor(pct / 5));
+  const bar = '█'.repeat(Math.floor(pct / 5)) + '░'.repeat(20 - Math.floor(pct / 5));
 
-  lines.push("");
+  lines.push('');
   lines.push(`Progress: [${bar}] ${pct}% (${doneCount}/${total})`);
   lines.push(
     `  Queued: ${counts.queued} | Running: ${counts.running} | Done: ${counts.done} | Failed: ${counts.failed} | Blocked: ${counts.blocked}`,
   );
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 // @plan — Display current plan
@@ -116,20 +116,20 @@ export function getPlanDisplay(sessionId: string): string {
     .all();
 
   if (rows.length === 0 || !rows[0].planJson) {
-    return "No plan finalized yet.";
+    return 'No plan finalized yet.';
   }
 
   try {
     const plan = JSON.parse(rows[0].planJson);
     if (plan.tasks && Array.isArray(plan.tasks)) {
-      const lines = ["Current Plan:", ""];
+      const lines = ['Current Plan:', ''];
       for (const task of plan.tasks) {
         lines.push(`  ${task.id}: ${task.title}`);
         if (task.description) {
           lines.push(`    ${task.description}`);
         }
       }
-      return lines.join("\n");
+      return lines.join('\n');
     }
     return rows[0].planJson;
   } catch {
@@ -150,18 +150,18 @@ export function getDiffDisplay(sessionId: string): string {
     .all();
 
   if (rows.length === 0 || !rows[0].repoLocalPath || !rows[0].workingBranch) {
-    return "No diff available.";
+    return 'No diff available.';
   }
 
   try {
     const defaultBranch = getDefaultBranch(rows[0].repoLocalPath);
     const diff = git(
-      ["diff", `${defaultBranch}...${rows[0].workingBranch}`],
+      ['diff', `${defaultBranch}...${rows[0].workingBranch}`],
       rows[0].repoLocalPath,
     );
-    return diff || "No changes yet.";
+    return diff || 'No changes yet.';
   } catch {
-    return "Could not generate diff.";
+    return 'Could not generate diff.';
   }
 }
 
@@ -175,7 +175,7 @@ export function getPrDisplay(sessionId: string): string {
     .all();
 
   if (rows.length === 0 || !rows[0].prUrl) {
-    return "No PR created yet.";
+    return 'No PR created yet.';
   }
 
   return `PR #${rows[0].prNumber}: ${rows[0].prUrl}`;
@@ -198,18 +198,18 @@ export function getTasksDisplay(sessionId: string): string {
     .all();
 
   if (taskRows.length === 0) {
-    return "No tasks defined.";
+    return 'No tasks defined.';
   }
 
-  const lines = ["Tasks:"];
+  const lines = ['Tasks:'];
   for (const task of taskRows) {
     const review = task.reviewVerdict
       ? ` (review: ${task.reviewVerdict}, cycles: ${task.reviewCycles})`
-      : "";
+      : '';
     lines.push(`  ${displayTaskId(task.id)}: ${task.title} [${task.status}]${review}`);
   }
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 // @help
@@ -228,39 +228,42 @@ export function getHelpDisplay(sessionId?: string): string {
     }
   }
 
-  const na = " (not applicable now)";
+  const na = ' (not applicable now)';
 
   const lines: string[] = [];
 
   if (status) {
     lines.push(`Session state: ${STATE_LABELS[status] ?? status}`);
-    lines.push("");
+    lines.push('');
   }
 
-  lines.push("Session commands (@ prefix):");
-  lines.push("");
+  lines.push('Session commands (@ prefix):');
+  lines.push('');
 
   // @build only relevant during planning
-  const buildNote = status && status !== "planning" ? na : "";
+  const buildNote = status && status !== 'planning' ? na : '';
   lines.push(`  @build      Finalize plan and start autonomous coding${buildNote}`);
 
-  lines.push("  @status     Show current task progress dashboard");
-  lines.push("  @plan       Re-display the current plan");
+  lines.push('  @status     Show current task progress dashboard');
+  lines.push('  @plan       Re-display the current plan');
 
   // @feedback works during planning (refines the plan) and awaiting_feedback/building (iterates on built code)
-  const fbNote = status && !["planning", "awaiting_feedback", "building"].includes(status) ? na : "";
-  lines.push(`  @feedback   Give feedback (refines plan during planning, iterates after build)${fbNote}`);
+  const fbNote =
+    status && !['planning', 'awaiting_feedback', 'building'].includes(status) ? na : '';
+  lines.push(
+    `  @feedback   Give feedback (refines plan during planning, iterates after build)${fbNote}`,
+  );
 
-  lines.push("  @diff       Show the current cumulative diff");
-  lines.push("  @pr         Show the PR link");
-  lines.push("  @tasks      List all tasks and their statuses");
-  lines.push("  @ask        Ask the architect about the development process");
-  lines.push("  @stop       Stop this session");
-  lines.push("  @help       Show this help message");
-  lines.push("");
-  lines.push("  Escape      Leave session (back to sweteam>)");
-  lines.push("");
-  lines.push("Any other text is sent to the planner.");
+  lines.push('  @diff       Show the current cumulative diff');
+  lines.push('  @pr         Show the PR link');
+  lines.push('  @tasks      List all tasks and their statuses');
+  lines.push('  @ask        Ask the architect about the development process');
+  lines.push('  @stop       Stop this session');
+  lines.push('  @help       Show this help message');
+  lines.push('');
+  lines.push('  Escape      Leave session (back to sweteam>)');
+  lines.push('');
+  lines.push('Any other text is sent to the planner.');
 
-  return lines.join("\n");
+  return lines.join('\n');
 }

@@ -1,7 +1,7 @@
-import { execFileSync } from "child_process";
-import { existsSync, readFileSync } from "fs";
-import { join } from "path";
-import { addMessage } from "../session/manager.js";
+import { execFileSync } from 'child_process';
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
+import { addMessage } from '../session/manager.js';
 
 export interface TestResult {
   passed: boolean;
@@ -10,69 +10,70 @@ export interface TestResult {
 }
 
 function detectTestCommand(repoPath: string): string | null {
-  const pkgPath = join(repoPath, "package.json");
+  const pkgPath = join(repoPath, 'package.json');
   if (existsSync(pkgPath)) {
     try {
-      const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
       if (pkg.scripts?.test && pkg.scripts.test !== 'echo "Error: no test specified" && exit 1') {
-        return "npm test";
+        return 'npm test';
       }
-    } catch {}
+    } catch {
+      /* intentionally empty */
+    }
   }
 
-  if (existsSync(join(repoPath, "Cargo.toml"))) {
-    return "cargo test";
+  if (existsSync(join(repoPath, 'Cargo.toml'))) {
+    return 'cargo test';
   }
 
-  if (existsSync(join(repoPath, "go.mod"))) {
-    return "go test ./...";
+  if (existsSync(join(repoPath, 'go.mod'))) {
+    return 'go test ./...';
   }
 
-  if (existsSync(join(repoPath, "pyproject.toml")) || existsSync(join(repoPath, "pytest.ini"))) {
-    return "pytest";
+  if (existsSync(join(repoPath, 'pyproject.toml')) || existsSync(join(repoPath, 'pytest.ini'))) {
+    return 'pytest';
   }
 
-  if (existsSync(join(repoPath, "Makefile"))) {
+  if (existsSync(join(repoPath, 'Makefile'))) {
     try {
-      const makefile = readFileSync(join(repoPath, "Makefile"), "utf-8");
-      if (makefile.includes("test:")) {
-        return "make test";
+      const makefile = readFileSync(join(repoPath, 'Makefile'), 'utf-8');
+      if (makefile.includes('test:')) {
+        return 'make test';
       }
-    } catch {}
+    } catch {
+      /* intentionally empty */
+    }
   }
 
   return null;
 }
 
-export function runTests(
-  repoPath: string,
-  sessionId: string,
-): TestResult {
+export function runTests(repoPath: string, sessionId: string): TestResult {
   const command = detectTestCommand(repoPath);
 
   if (!command) {
     return {
       passed: true,
-      output: "No test command detected, skipping tests.",
-      command: "(none)",
+      output: 'No test command detected, skipping tests.',
+      command: '(none)',
     };
   }
 
-  addMessage(sessionId, "system", `Running tests: ${command}`);
+  addMessage(sessionId, 'system', `Running tests: ${command}`);
 
   try {
-    const [cmd, ...args] = command.split(" ");
+    const [cmd, ...args] = command.split(' ');
     const output = execFileSync(cmd, args, {
       cwd: repoPath,
-      encoding: "utf-8",
+      encoding: 'utf-8',
       timeout: 120000,
-      stdio: ["pipe", "pipe", "pipe"],
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
 
     return { passed: true, output, command };
   } catch (err) {
     const output =
-      err instanceof Error && "stdout" in err
+      err instanceof Error && 'stdout' in err
         ? String((err as { stdout: string }).stdout)
         : String(err);
 

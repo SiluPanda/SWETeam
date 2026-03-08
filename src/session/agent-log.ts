@@ -1,18 +1,18 @@
-import {
-  mkdirSync,
-  appendFileSync,
-  readFileSync,
-  writeFileSync,
-  existsSync,
-  statSync,
-} from "fs";
-import { join } from "path";
-import { SWETEAM_DIR } from "../db/client.js";
+import { mkdirSync, appendFileSync, readFileSync, writeFileSync, existsSync, statSync } from 'fs';
+import { join } from 'path';
+import { SWETEAM_DIR } from '../db/client.js';
 
-const LOG_DIR = join(SWETEAM_DIR, "logs");
+const LOG_DIR = join(SWETEAM_DIR, 'logs');
 
 export interface AgentEvent {
-  type: "agent-start" | "output" | "agent-end" | "build-complete" | "phase-complete" | "input-needed" | "input-response";
+  type:
+    | 'agent-start'
+    | 'output'
+    | 'agent-end'
+    | 'build-complete'
+    | 'phase-complete'
+    | 'input-needed'
+    | 'input-response';
   id: string;
   role?: string;
   taskId?: string;
@@ -31,14 +31,11 @@ export function getLogPath(sessionId: string): string {
 }
 
 export function clearLog(sessionId: string): void {
-  writeFileSync(getLogPath(sessionId), "");
+  writeFileSync(getLogPath(sessionId), '');
 }
 
-export function writeEvent(
-  sessionId: string,
-  event: Omit<AgentEvent, "ts">,
-): void {
-  const line = JSON.stringify({ ...event, ts: Date.now() }) + "\n";
+export function writeEvent(sessionId: string, event: Omit<AgentEvent, 'ts'>): void {
+  const line = JSON.stringify({ ...event, ts: Date.now() }) + '\n';
   appendFileSync(getLogPath(sessionId), line);
 }
 
@@ -59,16 +56,16 @@ export function isLogActive(sessionId: string, staleThresholdMs: number = 10_000
   if (!existsSync(logPath)) return false;
 
   try {
-    const content = readFileSync(logPath, "utf-8").trim();
+    const content = readFileSync(logPath, 'utf-8').trim();
     if (!content) return false;
 
     // Check the last event's timestamp
-    const lines = content.split("\n").filter(Boolean);
+    const lines = content.split('\n').filter(Boolean);
     const lastLine = lines[lines.length - 1];
     const lastEvent = JSON.parse(lastLine) as AgentEvent;
 
     // If the last event is build-complete or phase-complete, the operation is done
-    if (lastEvent.type === "build-complete" || lastEvent.type === "phase-complete") return false;
+    if (lastEvent.type === 'build-complete' || lastEvent.type === 'phase-complete') return false;
 
     // If the last event was written recently, the build is likely still active
     const age = Date.now() - lastEvent.ts;
@@ -78,10 +75,7 @@ export function isLogActive(sessionId: string, staleThresholdMs: number = 10_000
   }
 }
 
-export function watchLog(
-  sessionId: string,
-  onEvent: (event: AgentEvent) => void,
-): LogWatcher {
+export function watchLog(sessionId: string, onEvent: (event: AgentEvent) => void): LogWatcher {
   const logPath = getLogPath(sessionId);
   let offset = 0;
   let stopped = false;
@@ -93,11 +87,11 @@ export function watchLog(
       const stat = statSync(logPath);
       if (stat.size <= offset) return;
 
-      const content = readFileSync(logPath, "utf-8");
+      const content = readFileSync(logPath, 'utf-8');
       const newContent = content.slice(offset);
       offset = content.length;
 
-      const lines = newContent.split("\n").filter(Boolean);
+      const lines = newContent.split('\n').filter(Boolean);
       for (const line of lines) {
         try {
           onEvent(JSON.parse(line));
@@ -139,7 +133,7 @@ export function waitForResponse(
 
     const watcher = watchLog(sessionId, (event) => {
       if (resolved) return;
-      if (event.type === "input-response" && event.requestId === requestId) {
+      if (event.type === 'input-response' && event.requestId === requestId) {
         resolved = true;
         watcher.stop();
         resolve(event.response ?? null);

@@ -1,14 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { CodexAdapter } from "../adapters/codex.js";
-import { OpenCodeAdapter } from "../adapters/opencode.js";
-import { CustomAdapter } from "../adapters/custom.js";
-import type { AgentConfig } from "../config/loader.js";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { EventEmitter } from 'events';
+import { CodexAdapter } from '../adapters/codex.js';
+import { OpenCodeAdapter } from '../adapters/opencode.js';
+import { CustomAdapter } from '../adapters/custom.js';
+import type { AgentConfig } from '../config/loader.js';
 
 // Mock child_process for all adapter tests
-vi.mock("child_process", () => {
-  const EventEmitter = require("events");
-
-  function createMockProc(exitCode: number, stdout: string, stderr: string = "") {
+vi.mock('child_process', () => {
+  function createMockProc(exitCode: number, stdout: string, stderr: string = '') {
     const proc = new EventEmitter();
     const stdin = new EventEmitter();
     stdin.write = vi.fn();
@@ -21,9 +20,9 @@ vi.mock("child_process", () => {
     proc.killed = false;
 
     setTimeout(() => {
-      if (stdout) proc.stdout.emit("data", Buffer.from(stdout));
-      if (stderr) proc.stderr.emit("data", Buffer.from(stderr));
-      proc.emit("close", exitCode);
+      if (stdout) proc.stdout.emit('data', Buffer.from(stdout));
+      if (stderr) proc.stderr.emit('data', Buffer.from(stderr));
+      proc.emit('close', exitCode);
     }, 5);
 
     return proc;
@@ -31,22 +30,22 @@ vi.mock("child_process", () => {
 
   return {
     execFileSync: vi.fn((command: string, args: string[]) => {
-      if (command === "which" && args.length > 0) {
+      if (command === 'which' && args.length > 0) {
         const binary = args[0];
-        if (["codex", "opencode", "my-tool"].includes(binary)) {
+        if (['codex', 'opencode', 'my-tool'].includes(binary)) {
           return `/usr/bin/${binary}\n`;
         }
-        throw new Error("not found");
+        throw new Error('not found');
       }
-      return "";
+      return '';
     }),
-    spawn: vi.fn((command: string, args: string[]) => {
+    spawn: vi.fn((command: string) => {
       return createMockProc(0, `mock output from ${command}`);
     }),
   };
 });
 
-describe("Codex adapter — end-to-end validation (#task-54)", () => {
+describe('Codex adapter — end-to-end validation (#task-54)', () => {
   let adapter: CodexAdapter;
 
   beforeEach(() => {
@@ -54,46 +53,46 @@ describe("Codex adapter — end-to-end validation (#task-54)", () => {
   });
 
   it("should have name 'codex'", () => {
-    expect(adapter.name).toBe("codex");
+    expect(adapter.name).toBe('codex');
   });
 
-  it("should check availability via which", async () => {
+  it('should check availability via which', async () => {
     const available = await adapter.isAvailable();
     expect(available).toBe(true);
   });
 
-  it("should execute with -q flag and pass prompt as argument", async () => {
+  it('should execute with -q flag and pass prompt as argument', async () => {
     const result = await adapter.execute({
-      prompt: "Write hello world",
-      cwd: "/tmp",
+      prompt: 'Write hello world',
+      cwd: '/tmp',
     });
 
-    expect(result.output).toContain("mock output");
+    expect(result.output).toContain('mock output');
     expect(result.exitCode).toBe(0);
     expect(result.durationMs).toBeGreaterThanOrEqual(0);
   });
 
-  it("should support timeout", async () => {
+  it('should support timeout', async () => {
     const result = await adapter.execute({
-      prompt: "Test",
-      cwd: "/tmp",
+      prompt: 'Test',
+      cwd: '/tmp',
       timeout: 60000,
     });
     expect(result.exitCode).toBe(0);
   });
 
-  it("should call onOutput callback", async () => {
+  it('should call onOutput callback', async () => {
     const chunks: string[] = [];
     await adapter.execute({
-      prompt: "Test",
-      cwd: "/tmp",
+      prompt: 'Test',
+      cwd: '/tmp',
       onOutput: (chunk) => chunks.push(chunk),
     });
     expect(chunks.length).toBeGreaterThan(0);
   });
 });
 
-describe("OpenCode adapter — end-to-end validation (#task-55)", () => {
+describe('OpenCode adapter — end-to-end validation (#task-55)', () => {
   let adapter: OpenCodeAdapter;
 
   beforeEach(() => {
@@ -101,71 +100,71 @@ describe("OpenCode adapter — end-to-end validation (#task-55)", () => {
   });
 
   it("should have name 'opencode'", () => {
-    expect(adapter.name).toBe("opencode");
+    expect(adapter.name).toBe('opencode');
   });
 
-  it("should check availability", async () => {
+  it('should check availability', async () => {
     const available = await adapter.isAvailable();
     expect(available).toBe(true);
   });
 
-  it("should execute with --non-interactive flag", async () => {
+  it('should execute with --non-interactive flag', async () => {
     const result = await adapter.execute({
-      prompt: "Create file",
-      cwd: "/tmp",
+      prompt: 'Create file',
+      cwd: '/tmp',
     });
 
-    expect(result.output).toContain("mock output");
+    expect(result.output).toContain('mock output');
     expect(result.exitCode).toBe(0);
   });
 
-  it("should return duration", async () => {
-    const result = await adapter.execute({ prompt: "X", cwd: "/tmp" });
+  it('should return duration', async () => {
+    const result = await adapter.execute({ prompt: 'X', cwd: '/tmp' });
     expect(result.durationMs).toBeGreaterThanOrEqual(0);
   });
 });
 
-describe("Custom adapter — config-driven validation (#task-56)", () => {
+describe('Custom adapter — config-driven validation (#task-56)', () => {
   const config: AgentConfig = {
-    command: "my-tool",
-    args: ["--mode", "auto"],
-    prompt_via: "stdin",
-    output_from: "stdout",
+    command: 'my-tool',
+    args: ['--mode', 'auto'],
+    prompt_via: 'stdin',
+    output_from: 'stdout',
   };
 
-  it("should use configured command name", () => {
-    const adapter = new CustomAdapter("my-tool", config);
-    expect(adapter.name).toBe("my-tool");
+  it('should use configured command name', () => {
+    const adapter = new CustomAdapter('my-tool', config);
+    expect(adapter.name).toBe('my-tool');
   });
 
-  it("should check availability of custom command", async () => {
-    const adapter = new CustomAdapter("my-tool", config);
+  it('should check availability of custom command', async () => {
+    const adapter = new CustomAdapter('my-tool', config);
     const available = await adapter.isAvailable();
     expect(available).toBe(true);
   });
 
-  it("should execute via stdin prompt delivery", async () => {
-    const adapter = new CustomAdapter("my-tool", config);
+  it('should execute via stdin prompt delivery', async () => {
+    const adapter = new CustomAdapter('my-tool', config);
     const result = await adapter.execute({
-      prompt: "Do something",
-      cwd: "/tmp",
+      prompt: 'Do something',
+      cwd: '/tmp',
     });
 
-    expect(result.output).toContain("mock output");
+    expect(result.output).toContain('mock output');
     expect(result.exitCode).toBe(0);
   });
 
-  it("should support arg-based prompt delivery", async () => {
+  it('should support arg-based prompt delivery', async () => {
     const argConfig: AgentConfig = {
-      command: "my-tool",
-      args: ["--run"],
-      prompt_via: "arg",
-      output_from: "stdout",
+      command: 'my-tool',
+      args: ['--run'],
+      prompt_via: 'arg',
+      output_from: 'stdout',
     };
-    const adapter = new CustomAdapter("arg-tool", argConfig);
+    const adapter = new CustomAdapter('arg-tool', argConfig);
     const result = await adapter.execute({
-      prompt: "Execute this",
-      cwd: "/tmp",
+      prompt: 'Execute this',
+      cwd: '/tmp',
     });
     expect(result.exitCode).toBe(0);
   });
