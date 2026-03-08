@@ -145,6 +145,48 @@ function watchBuildLive(sessionId: string): Promise<void> {
     let inputBuffer = '';
     let pendingRequestId: string | null = null;
 
+    // Declare staleTimer before the watcher so finish() can always access it
+    // (avoids TDZ crash if finish() is called during the initial log replay).
+    let staleTimer: ReturnType<typeof setInterval> | null = null;
+
+    function onKey(data: Buffer) {
+      const key = data.toString();
+
+      if (inputMode) {
+        // In input mode: collect typed text
+        if (key === '\x1b' || key.startsWith('\x1b')) {
+          // Escape (possibly with trailing bytes): cancel input and detach
+          process.stdout.write('\n(input cancelled)\n');
+          exitInputMode();
+          finish('\nDetached from build output.\n');
+        } else if (key === '\r' || key === '\n') {
+          // Enter: submit the response
+          submitInput();
+        } else if (key === '\x7f' || key === '\b') {
+          // Backspace
+          if (inputBuffer.length > 0) {
+            inputBuffer = inputBuffer.slice(0, -1);
+            process.stdout.write('\b \b');
+          }
+        } else if (key === '\x03') {
+          // Ctrl-C: cancel input and detach
+          process.stdout.write('\n(input cancelled)\n');
+          exitInputMode();
+          finish('\nDetached from build output.\n');
+        } else if (key.charCodeAt(0) >= 32) {
+          // Printable character
+          inputBuffer += key;
+          process.stdout.write(key);
+        }
+        return;
+      }
+
+      // Normal watch mode: Enter/Ctrl-C/Escape to detach
+      if (key === '\r' || key === '\n' || key === '\x03' || key.charCodeAt(0) === 0x1b) {
+        finish('\nDetached from build output.\n');
+      }
+    }
+
     function finish(reason?: string) {
       if (resolved) return;
       resolved = true;
@@ -192,7 +234,16 @@ function watchBuildLive(sessionId: string): Promise<void> {
       exitInputMode();
     }
 
+    // Set up stdin BEFORE the watcher so keypresses work immediately,
+    // even if the initial replay triggers finish().
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode!(true);
+    }
+    process.stdin.resume();
+    process.stdin.on('data', onKey);
+
     const watcher = watchLog(sessionId, (event: AgentEvent) => {
+      if (resolved) return; // Already detached; ignore late events
       lastEventTime = Date.now();
       switch (event.type) {
         case 'agent-start':
@@ -218,7 +269,7 @@ function watchBuildLive(sessionId: string): Promise<void> {
     // Show periodic warnings when no output arrives; auto-detach after 5 minutes
     let warnedAt30s = false;
     let warnedAt2m = false;
-    const staleTimer = setInterval(() => {
+    staleTimer = setInterval(() => {
       const idle = Date.now() - lastEventTime;
       if (idle > 300_000) {
         finish(
@@ -234,50 +285,6 @@ function watchBuildLive(sessionId: string): Promise<void> {
         process.stdout.write('\nStill waiting for output... (agent may be thinking)\n');
       }
     }, 1000);
-
-    function onKey(data: Buffer) {
-      const key = data.toString();
-
-      if (inputMode) {
-        // In input mode: collect typed text
-        if (key === '\x1b') {
-          // Escape: cancel input and detach
-          process.stdout.write('\n(input cancelled)\n');
-          exitInputMode();
-          finish('\nDetached from build output.\n');
-        } else if (key === '\r' || key === '\n') {
-          // Enter: submit the response
-          submitInput();
-        } else if (key === '\x7f' || key === '\b') {
-          // Backspace
-          if (inputBuffer.length > 0) {
-            inputBuffer = inputBuffer.slice(0, -1);
-            process.stdout.write('\b \b');
-          }
-        } else if (key === '\x03') {
-          // Ctrl-C: cancel input and detach
-          process.stdout.write('\n(input cancelled)\n');
-          exitInputMode();
-          finish('\nDetached from build output.\n');
-        } else if (key.charCodeAt(0) >= 32) {
-          // Printable character
-          inputBuffer += key;
-          process.stdout.write(key);
-        }
-        return;
-      }
-
-      // Normal watch mode: Enter/Ctrl-C/Escape to detach
-      if (key === '\r' || key === '\n' || key === '\x03' || key === '\x1b') {
-        finish('\nDetached from build output.\n');
-      }
-    }
-
-    if (process.stdin.isTTY) {
-      process.stdin.setRawMode!(true);
-    }
-    process.stdin.resume();
-    process.stdin.on('data', onKey);
   });
 }
 
