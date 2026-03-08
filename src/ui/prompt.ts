@@ -24,10 +24,12 @@ export interface PromptOptions {
   prompt: string;
   /** Returns matching completions for the current input. */
   getCompletions: (input: string) => string[];
+  /** Number of columns reserved on the right (e.g. sidebar). Input will not overflow into them. */
+  reservedRight?: number;
 }
 
 export function promptLine(opts: PromptOptions): Promise<string> {
-  const { prompt, getCompletions } = opts;
+  const { prompt, getCompletions, reservedRight = 0 } = opts;
 
   return new Promise<string>((resolve) => {
     let input = '';
@@ -35,6 +37,12 @@ export function promptLine(opts: PromptOptions): Promise<string> {
     let suggestions: string[] = [];
     let selectedIndex = 0;
     let dropdownRows = 0; // how many rows the dropdown currently occupies
+
+    /** Usable columns for prompt content (terminal width minus reserved sidebar). */
+    function usableWidth(): number {
+      const cols = process.stdout.columns ?? 80;
+      return Math.max(20, cols - reservedRight);
+    }
 
     // ── rendering ────────────────────────────────────────────────
 
@@ -54,14 +62,32 @@ export function promptLine(opts: PromptOptions): Promise<string> {
       // Clear previous dropdown first
       clearDropdown();
 
-      // Clear the prompt line and redraw
-      process.stdout.write(`\r\x1b[2K${prompt}${input}`);
+      const width = usableWidth();
+      const promptLen = prompt.length;
+      const inputSpace = width - promptLen;
 
-      // Show ghost text for the selected match
+      // When input is longer than available space, show a sliding window around the cursor
+      let visibleInput = input;
+      let visibleCursor = cursor;
+      if (input.length > inputSpace) {
+        // Keep cursor roughly centered in the visible window
+        let start = cursor - Math.floor(inputSpace / 2);
+        start = Math.max(0, Math.min(start, input.length - inputSpace));
+        visibleInput = input.slice(start, start + inputSpace);
+        visibleCursor = cursor - start;
+      }
+
+      // Clear the prompt line and redraw
+      process.stdout.write(`\r\x1b[2K${prompt}${visibleInput}`);
+
+      // Show ghost text for the selected match (only if room)
       const selected = suggestions[selectedIndex];
       if (selected && selected.startsWith(input) && selected.length > input.length) {
-        const ghost = selected.slice(input.length);
-        process.stdout.write(chalk.dim(ghost));
+        const ghostRoom = width - promptLen - visibleInput.length;
+        if (ghostRoom > 0) {
+          const ghost = selected.slice(input.length, input.length + ghostRoom);
+          process.stdout.write(chalk.dim(ghost));
+        }
       }
 
       // Draw dropdown below the prompt line
@@ -69,10 +95,11 @@ export function promptLine(opts: PromptOptions): Promise<string> {
         const maxVisible = Math.min(suggestions.length, 8);
         for (let i = 0; i < maxVisible; i++) {
           const item = suggestions[i];
+          const truncItem = item.length > width - 3 ? item.slice(0, width - 6) + '…' : item;
           if (i === selectedIndex) {
-            process.stdout.write('\n' + chalk.bgBlue.white(` ${item} `));
+            process.stdout.write('\n' + chalk.bgBlue.white(` ${truncItem} `));
           } else {
-            process.stdout.write('\n ' + chalk.dim(item) + ' ');
+            process.stdout.write('\n ' + chalk.dim(truncItem) + ' ');
           }
         }
         if (suggestions.length > maxVisible) {
@@ -86,7 +113,7 @@ export function promptLine(opts: PromptOptions): Promise<string> {
       }
 
       // Park cursor at end of user's actual input (before ghost)
-      process.stdout.write(`\r\x1b[${prompt.length + cursor}C`);
+      process.stdout.write(`\r\x1b[${promptLen + visibleCursor}C`);
     }
 
     function refreshSuggestions() {

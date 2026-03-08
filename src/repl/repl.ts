@@ -512,6 +512,7 @@ export async function runRepl(opts?: ReplOptions): Promise<void> {
     const line = await promptLine({
       prompt: getPrompt(),
       getCompletions,
+      reservedRight: sidebar.width,
     });
 
     // ── Escape: leave session, go back to sweteam> ──
