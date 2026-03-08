@@ -16,6 +16,21 @@ import {
   getTasksDisplay,
   getHelpDisplay,
 } from './in-session-commands.js';
+import { killSessionProcesses, hasActiveProcesses } from '../lifecycle.js';
+
+// ── Planner activity tracking ─────────────────────────────────────
+interface PlannerState {
+  inProgress: boolean;
+  startedAt: number | null;
+  lastActivityAt: number | null;
+}
+
+const plannerStates = new Map<string, PlannerState>();
+
+/** Get current planner state for a session (used by @status). */
+export function getPlannerState(sessionId: string): PlannerState | undefined {
+  return plannerStates.get(sessionId);
+}
 
 /**
  * Handlers for an active session.
@@ -42,6 +57,8 @@ export interface SessionHandlers {
   onTasks: () => Promise<void>;
   /** Ask the architect agent a question about the development process. */
   onAsk: (question: string) => Promise<void>;
+  /** Cancel the in-flight planner without stopping the session. */
+  onCancel: () => Promise<void>;
   /** Show available session commands. */
   onHelp: () => void;
 }
@@ -70,6 +87,7 @@ export function createSessionHandlers(
   let currentGoal = goal;
   let buildInProgress = false;
   let planningInProgress = false;
+  plannerStates.set(sessionId, { inProgress: false, startedAt: null, lastActivityAt: null });
 
   const handlers: SessionHandlers = {
     onMessage: async (text: string): Promise<void> => {
@@ -130,8 +148,11 @@ export function createSessionHandlers(
       });
 
       planningInProgress = true;
+      plannerStates.set(sessionId, { inProgress: true, startedAt: Date.now(), lastActivityAt: Date.now() });
       invokePlanner(sessionId, repo, currentGoal, repoPath, (chunk) => {
         writeEvent(sessionId, { type: 'output', id: plannerId, chunk });
+        const ps = plannerStates.get(sessionId);
+        if (ps) ps.lastActivityAt = Date.now();
       })
         .then((response) => {
           writeEvent(sessionId, { type: 'agent-end', id: plannerId, success: true });
@@ -159,6 +180,7 @@ export function createSessionHandlers(
         })
         .finally(() => {
           planningInProgress = false;
+          plannerStates.set(sessionId, { inProgress: false, startedAt: null, lastActivityAt: null });
         });
 
       // Give the planner a moment to start writing events
@@ -324,6 +346,18 @@ export function createSessionHandlers(
       await new Promise((r) => setTimeout(r, 300));
     },
 
+    onCancel: async (): Promise<void> => {
+      if (!planningInProgress) {
+        console.log('No planner running to cancel.');
+        return;
+      }
+      killSessionProcesses(sessionId);
+      planningInProgress = false;
+      plannerStates.set(sessionId, { inProgress: false, startedAt: null, lastActivityAt: null });
+      writeEvent(sessionId, { type: 'phase-complete', id: 'planner' });
+      console.log('\nPlanning cancelled. Send a new message to restart planning.\n');
+    },
+
     onHelp: (): void => {
       console.log(getHelpDisplay(sessionId));
     },
@@ -359,6 +393,8 @@ export async function handleSessionCommand(
     await handlers.onPr();
   } else if (trimmed === '@tasks') {
     await handlers.onTasks();
+  } else if (trimmed === '@cancel') {
+    await handlers.onCancel();
   } else if (trimmed === '@ask') {
     console.log('Usage: @ask <your question>');
   } else if (trimmed.startsWith('@ask ')) {

@@ -10,6 +10,14 @@ export function trackProcess(proc: ChildProcess, sessionId?: string): void {
   proc.on('error', () => activeProcesses.delete(proc));
 }
 
+/** Check whether any tracked processes are still running for a session. */
+export function hasActiveProcesses(sessionId: string): boolean {
+  for (const [proc, sid] of activeProcesses) {
+    if (sid === sessionId && !proc.killed) return true;
+  }
+  return false;
+}
+
 /** Kill processes belonging to a specific session, or all if no sessionId given. */
 export function killSessionProcesses(sessionId: string): void {
   for (const [proc, sid] of activeProcesses) {

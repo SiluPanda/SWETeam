@@ -215,11 +215,24 @@ function watchBuildLive(sessionId: string): Promise<void> {
       }
     });
 
-    // Auto-detach if no new events arrive for 30 seconds (build is dead)
+    // Show periodic warnings when no output arrives; auto-detach after 5 minutes
+    let warnedAt30s = false;
+    let warnedAt2m = false;
     const staleTimer = setInterval(() => {
-      if (Date.now() - lastEventTime > 30_000) {
+      const idle = Date.now() - lastEventTime;
+      if (idle > 300_000) {
         finish(
-          '\nNo build activity for 30s. Build may still be running — type @status to check.\n',
+          '\nNo activity for 5 minutes. Agent may still be running — type @status to check.\n',
+        );
+      } else if (idle > 120_000 && !warnedAt2m) {
+        warnedAt2m = true;
+        process.stdout.write(
+          '\n⚠ No output for 2 minutes. Type @cancel to abort, or keep waiting.\n',
+        );
+      } else if (idle > 30_000 && !warnedAt30s) {
+        warnedAt30s = true;
+        process.stdout.write(
+          '\nStill waiting for output... (agent may be thinking)\n',
         );
       }
     }, 1000);
@@ -545,6 +558,16 @@ export async function runRepl(opts?: ReplOptions): Promise<void> {
     if (trimmed.startsWith('@')) {
       if (!activeSession) {
         console.log('No active session. Use /create or /enter first.');
+        continue;
+      }
+
+      // @cancel — cancel in-flight planner
+      if (trimmed === '@cancel') {
+        try {
+          await handleSessionCommand(trimmed, activeSession.handlers);
+        } catch (err) {
+          console.error(friendlyError(err instanceof Error ? err.message : String(err)));
+        }
         continue;
       }
 

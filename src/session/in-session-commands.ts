@@ -3,6 +3,8 @@ import { getDb } from '../db/client.js';
 import { sessions, tasks as tasksTable } from '../db/schema.js';
 import { git, getDefaultBranch } from '../git/git.js';
 import { displayTaskId } from '../orchestrator/orchestrator.js';
+import { getPlannerState } from './interactive.js';
+import { hasActiveProcesses } from '../lifecycle.js';
 
 // Human-readable labels for session statuses
 const STATE_LABELS: Record<string, string> = {
@@ -12,6 +14,16 @@ const STATE_LABELS: Record<string, string> = {
   iterating: 'Iterating',
   stopped: 'Stopped',
 };
+
+/** Format a duration in ms to a human-readable string like "2m 30s" or "31m". */
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (seconds === 0) return `${minutes}m`;
+  return `${minutes}m ${seconds}s`;
+}
 
 // @status — Task progress with summary
 export function getStatusDisplay(sessionId: string): string {
@@ -52,6 +64,36 @@ export function getStatusDisplay(sessionId: string): string {
     if (hasPlan) {
       return headerLines.join('\n') + 'Plan ready. Type @build to start autonomous coding.';
     }
+
+    // Enrich status during active planning
+    const plannerState = getPlannerState(sessionId);
+    if (plannerState?.inProgress) {
+      const elapsed = Date.now() - (plannerState.startedAt ?? Date.now());
+      const elapsedStr = formatDuration(elapsed);
+      const processAlive = hasActiveProcesses(sessionId);
+
+      const lines = [...headerLines];
+      lines.push(`Planner: running for ${elapsedStr}`);
+
+      if (plannerState.lastActivityAt) {
+        const sinceActivity = Date.now() - plannerState.lastActivityAt;
+        if (sinceActivity > 60_000) {
+          lines.push(`  ⚠ No output for ${formatDuration(sinceActivity)}`);
+          if (!processAlive) {
+            lines.push('  ⚠ Planner process may have crashed. Try @cancel then resend your message.');
+          } else {
+            lines.push('  Process is alive — agent may be thinking.');
+          }
+        } else {
+          lines.push('  Receiving output...');
+        }
+      }
+
+      lines.push('');
+      lines.push('Hint: @cancel to abort planning, or wait for it to finish.');
+      return lines.join('\n');
+    }
+
     return headerLines.join('\n') + 'No plan yet. Describe your goal to start planning.';
   }
 
@@ -266,6 +308,9 @@ export function getHelpDisplay(sessionId?: string): string {
   lines.push('  @pr         Show the PR link');
   lines.push('  @tasks      List all tasks and their statuses');
   lines.push('  @ask        Ask the architect about the development process');
+  // @cancel only relevant during planning
+  const cancelNote = status && status !== 'planning' ? na : '';
+  lines.push(`  @cancel     Cancel the current planner run (session stays active)${cancelNote}`);
   lines.push('  @stop       Stop this session');
   lines.push('  @help       Show this help message');
   lines.push('');

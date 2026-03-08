@@ -249,7 +249,7 @@ export async function invokePlanner(
   const result = await adapter.execute({
     prompt,
     cwd: repoPath,
-    timeout: 0,
+    timeout: 20 * 60 * 1000, // 20-min safety net for truly hung processes
     onOutput,
   });
 
