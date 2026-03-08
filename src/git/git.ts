@@ -12,6 +12,7 @@ export function git(args: string[], cwd: string): string {
     cwd,
     encoding: 'utf-8',
     timeout: 30000,
+    stdio: 'pipe',
   }).trim();
 }
 
@@ -23,6 +24,7 @@ export function gh(args: string[], cwd: string): string {
     cwd,
     encoding: 'utf-8',
     timeout: 30000,
+    stdio: 'pipe',
   }).trim();
 }
 
