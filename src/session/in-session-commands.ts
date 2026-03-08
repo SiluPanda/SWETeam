@@ -19,12 +19,13 @@ export function getStatusDisplay(sessionId: string): string {
 
   // Prepend session state and goal
   const sessionRows = db
-    .select({ status: sessions.status, goal: sessions.goal })
+    .select({ status: sessions.status, goal: sessions.goal, planJson: sessions.planJson })
     .from(sessions)
     .where(eq(sessions.id, sessionId))
     .all();
 
   const headerLines: string[] = [];
+  let hasPlan = false;
   if (sessionRows.length > 0) {
     const s = sessionRows[0];
     const label = STATE_LABELS[s.status as string] ?? s.status;
@@ -33,6 +34,7 @@ export function getStatusDisplay(sessionId: string): string {
       headerLines.push(`Goal:    ${s.goal}`);
     }
     headerLines.push('');
+    hasPlan = s.planJson != null;
   }
 
   const taskRows = db
@@ -47,7 +49,10 @@ export function getStatusDisplay(sessionId: string): string {
     .all();
 
   if (taskRows.length === 0) {
-    return headerLines.join('\n') + 'No tasks yet. Finalize the plan and type @build.';
+    if (hasPlan) {
+      return headerLines.join('\n') + 'Plan ready. Type @build to start autonomous coding.';
+    }
+    return headerLines.join('\n') + 'No plan yet. Describe your goal to start planning.';
   }
 
   const counts = {
@@ -256,6 +261,7 @@ export function getHelpDisplay(sessionId?: string): string {
     `  @feedback   Give feedback (refines plan during planning, iterates after build)${fbNote}`,
   );
 
+  lines.push('  @watch      Re-attach to live agent output');
   lines.push('  @diff       Show the current cumulative diff');
   lines.push('  @pr         Show the PR link');
   lines.push('  @tasks      List all tasks and their statuses');

@@ -171,9 +171,31 @@ describe('in-session-commands', () => {
       expect(output).toContain('[fixing]');
     });
 
-    it('should show empty message when no tasks', () => {
+    it('should show message when no plan exists', () => {
       const output = getStatusDisplay('nonexistent');
-      expect(output).toContain('No tasks yet');
+      expect(output).toContain('No plan yet');
+    });
+
+    it('should show plan-ready message when plan exists but no tasks', () => {
+      // s_cmd has planJson set but no @build has been run
+      // (tasks exist from setup, so create a new session with plan but no tasks)
+      const db = getDb();
+      const now = new Date();
+      db.insert(sessions)
+        .values({
+          id: 's_planned',
+          repo: 'owner/repo',
+          goal: 'Test plan ready',
+          status: 'planning',
+          planJson: JSON.stringify({ tasks: [{ id: 't-1', title: 'Task' }] }),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const output = getStatusDisplay('s_planned');
+      expect(output).toContain('Plan ready');
+      expect(output).toContain('@build');
     });
   });
 
@@ -247,6 +269,7 @@ describe('in-session-commands', () => {
       expect(output).toContain('@status');
       expect(output).toContain('@plan');
       expect(output).toContain('@feedback');
+      expect(output).toContain('@watch');
       expect(output).toContain('@diff');
       expect(output).toContain('@pr');
       expect(output).toContain('@tasks');

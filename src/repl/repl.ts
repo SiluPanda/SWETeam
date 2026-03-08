@@ -547,6 +547,23 @@ export async function runRepl(opts?: ReplOptions): Promise<void> {
         console.log('No active session. Use /create or /enter first.');
         continue;
       }
+
+      // @watch — re-attach to live agent output
+      if (trimmed === '@watch') {
+        if (isLogActive(activeSession.id)) {
+          console.log('Attaching to live output... (press Enter or Escape to detach)\n');
+          await watchBuildLive(activeSession.id);
+          const { getSession: gs } = await import('../session/manager.js');
+          const updated = gs(activeSession.id);
+          if (updated?.status === 'awaiting_feedback') {
+            console.log('Build complete. Send feedback or @feedback <text>.\n');
+          }
+        } else {
+          console.log('No active agent output. Use @status to check progress.');
+        }
+        continue;
+      }
+
       try {
         const stopped = await handleSessionCommand(trimmed, activeSession.handlers);
         if (stopped) {
