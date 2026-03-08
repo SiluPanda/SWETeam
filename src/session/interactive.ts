@@ -16,7 +16,7 @@ import {
   getTasksDisplay,
   getHelpDisplay,
 } from './in-session-commands.js';
-import { killSessionProcesses, hasActiveProcesses } from '../lifecycle.js';
+import { killSessionProcesses } from '../lifecycle.js';
 
 // ── Planner activity tracking ─────────────────────────────────────
 interface PlannerState {
