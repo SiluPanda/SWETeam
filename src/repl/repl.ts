@@ -1,5 +1,6 @@
 import { existsSync } from "fs";
 import { listSessions, getSession } from "../session/manager.js";
+import { transition } from "../session/state-machine.js";
 import { renderBanner, type RecentSession } from "../ui/banner.js";
 import { promptLine, ESCAPE_SIGNAL } from "../ui/prompt.js";
 import {
@@ -344,6 +345,8 @@ async function dispatch(command: string, args: string[]): Promise<void> {
             console.log("\nBuild still in progress. Re-enter to reattach, or type @build to restart.\n");
           }
         } else {
+          // Build is stale — transition back to planning so @build can work
+          try { transition(session.id, "planning"); } catch { /* already transitioned */ }
           console.log(getStatusDisplay(session.id));
           console.log("Build was interrupted. Type @build to restart.\n");
         }

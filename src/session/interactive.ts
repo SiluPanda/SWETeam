@@ -167,11 +167,16 @@ export function createSessionHandlers(
         return;
       }
 
-      // Check session state
+      // Check session state — but allow restart if the build is stale (interrupted)
       const currentSession = getSession(sessionId);
       if (currentSession?.status === "building" || currentSession?.status === "iterating") {
-        console.log("A build is already in progress. Use @stop to cancel it first.");
-        return;
+        const { isLogActive } = await import("../session/agent-log.js");
+        if (isLogActive(sessionId)) {
+          console.log("A build is already in progress. Use @stop to cancel it first.");
+          return;
+        }
+        // Build is stale/interrupted — recover to planning so we can restart
+        try { transition(sessionId, "planning"); } catch { /* already transitioned */ }
       }
 
       if (!lastPlannerResponse) {
