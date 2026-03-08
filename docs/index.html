@@ -12,7 +12,7 @@
   <style>
     /* ─── Reset & Base ─────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; font-size: 16px; }
+    html { scroll-behavior: smooth; font-size: 16px; overflow-x: hidden; }
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       background: #0a0e1a;
@@ -39,11 +39,12 @@
       font-size: 0.85rem;
       line-height: 1.6;
       color: #e2e8f0;
+      max-width: 100%;
     }
     pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
 
     /* ─── Layout ───────────────────────────────────────── */
-    .container { max-width: 960px; margin: 0 auto; padding: 0 1.5rem; }
+    .container { max-width: 960px; margin: 0 auto; padding: 0 1.5rem; overflow-x: hidden; }
 
     /* ─── Nav ──────────────────────────────────────────── */
     nav {
@@ -81,7 +82,7 @@
     .hero::before {
       content: '';
       position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-      width: 600px; height: 600px;
+      width: 100%; max-width: 600px; height: 600px;
       background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
       pointer-events: none;
     }
@@ -264,7 +265,7 @@
     /* ─── Tables ───────────────────────────────────────── */
     table {
       width: 100%; border-collapse: collapse; margin: 1rem 0;
-      font-size: 0.9rem;
+      font-size: 0.9rem; display: block; overflow-x: auto;
     }
     th, td {
       text-align: left; padding: 0.7rem 1rem;
