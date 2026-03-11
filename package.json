@@ -1,6 +1,6 @@
 {
   "name": "sweteam",
-  "version": "0.6.3",
+  "version": "0.7.0",
   "description": "Autonomous coding agent orchestrator — turns high-level goals into PR'd code",
   "type": "module",
   "bin": {
@@ -56,7 +56,6 @@
     "@eslint/js": "^10.0.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.3.3",
-    "@types/react": "^19.2.14",
     "drizzle-kit": "^0.31.9",
     "eslint": "^10.0.3",
     "prettier": "^3.8.1",
@@ -71,8 +70,6 @@
     "chalk": "^5.6.2",
     "commander": "^14.0.3",
     "drizzle-orm": "^0.45.1",
-    "ink": "^6.8.0",
-    "nanoid": "^5.1.6",
-    "react": "^19.2.4"
+    "nanoid": "^5.1.6"
   }
 }

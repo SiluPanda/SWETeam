@@ -173,10 +173,16 @@ export async function handleBuild(sessionId: string, planOutput: string): Promis
   const sessionBranch = session.workingBranch!;
 
   // Ensure we're on the session branch before cleanup (prevents it from being deleted)
-  try {
-    git(['checkout', sessionBranch], repoPath);
-  } catch {
-    // May already be on it
+  const currentBranch = git(['rev-parse', '--abbrev-ref', 'HEAD'], repoPath);
+  if (currentBranch !== sessionBranch) {
+    try {
+      git(['checkout', sessionBranch], repoPath);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Cannot switch to session branch '${sessionBranch}': ${msg}`, {
+        cause: err,
+      });
+    }
   }
 
   // Clean up stale task branches from previous build attempts.

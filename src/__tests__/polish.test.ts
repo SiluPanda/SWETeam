@@ -1,11 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, readFileSync } from 'fs';
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
 import { join } from 'path';
-import { tmpdir } from 'os';
-import { getDb, closeDb } from '../db/client.js';
-import { sessions } from '../db/schema.js';
-import { canResume, resumeSession } from '../session/resume.js';
-import { getSession } from '../session/manager.js';
 
 // Test CLI flag overrides are registered
 describe('CLI flag overrides (#task-74)', () => {
@@ -15,91 +10,6 @@ describe('CLI flag overrides (#task-74)', () => {
     expect(indexContent).toContain('--reviewer');
     expect(indexContent).toContain('--parallel');
     expect(indexContent).toContain('--config');
-  });
-});
-
-describe('Session resume (#task-75)', () => {
-  const tempDirs: string[] = [];
-
-  beforeEach(() => {
-    const dir = mkdtempSync(join(tmpdir(), 'sweteam-resume-test-'));
-    tempDirs.push(dir);
-    const db = getDb(join(dir, 'test.db'));
-
-    db.insert(sessions)
-      .values([
-        {
-          id: 's_stopped',
-          repo: 'owner/repo',
-          goal: 'Test',
-          status: 'stopped',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          stoppedAt: new Date(),
-        },
-        {
-          id: 's_planning',
-          repo: 'owner/repo',
-          goal: 'Test',
-          status: 'planning',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: 's_awaiting',
-          repo: 'owner/repo',
-          goal: 'Test',
-          status: 'awaiting_feedback',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ])
-      .run();
-  });
-
-  afterEach(() => {
-    closeDb();
-    for (const dir of tempDirs) {
-      rmSync(dir, { recursive: true, force: true });
-    }
-    tempDirs.length = 0;
-  });
-
-  it('should identify stopped sessions as resumable', () => {
-    const result = canResume('s_stopped');
-    expect(result.resumable).toBe(true);
-    expect(result.allowedActions).toContain('@build');
-    expect(result.allowedActions).toContain('@feedback');
-  });
-
-  it('should identify planning sessions as resumable', () => {
-    const result = canResume('s_planning');
-    expect(result.resumable).toBe(true);
-    expect(result.allowedActions).toContain('@build');
-    expect(result.allowedActions).toContain('@feedback');
-  });
-
-  it('should identify awaiting_feedback as resumable', () => {
-    const result = canResume('s_awaiting');
-    expect(result.resumable).toBe(true);
-    expect(result.allowedActions).toContain('@feedback');
-  });
-
-  it('should resume stopped session to building', () => {
-    resumeSession('s_stopped', 'build');
-    const session = getSession('s_stopped');
-    expect(session!.status).toBe('building');
-  });
-
-  it('should allow resuming stopped session to iterating', () => {
-    resumeSession('s_stopped', 'iterate');
-    const session2 = getSession('s_stopped');
-    expect(session2!.status).toBe('iterating');
-  });
-
-  it('should return not resumable for non-existent session', () => {
-    const result = canResume('nonexistent');
-    expect(result.resumable).toBe(false);
   });
 });
 

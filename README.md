@@ -17,7 +17,7 @@
 <p align="center">
   <img src="https://img.shields.io/npm/v/sweteam?color=blue&label=npm" alt="npm version" />
   <img src="https://img.shields.io/npm/dt/sweteam?color=brightgreen&label=downloads" alt="npm downloads" />
-  <img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen" alt="node version" />
+  <img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen" alt="node version" />
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license" />
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome" />
 </p>
@@ -153,7 +153,7 @@ Plus these required tools:
 
 - **git** — version control
 - **gh** — [GitHub CLI](https://cli.github.com/) (authenticated via `gh auth login`)
-- **Node.js** — v18+
+- **Node.js** — v20+
 
 ## Installation
 
@@ -546,8 +546,9 @@ src/
 ├── commands/                # CLI subcommands (create, list, enter, etc.)
 ├── config/                  # Config loader and GitHub auth
 ├── git/                     # Git and GitHub CLI wrappers
-├── ui/                      # Terminal UI (banner, prompt, agent panel, markdown)
+├── ui/                      # Terminal UI (banner, prompt, agent panel, sidebar, markdown)
 ├── db/                      # SQLite schema and client (Drizzle ORM)
+├── utils/                   # Utility functions (time formatting)
 └── __tests__/               # Test suite
 ```
 
@@ -555,7 +556,7 @@ src/
 
 | Component     | Choice                           |
 | ------------- | -------------------------------- |
-| Language      | TypeScript (ESM, Node.js 18+)    |
+| Language      | TypeScript (ESM, Node.js 20+)    |
 | ORM           | Drizzle                          |
 | Database      | SQLite via better-sqlite3        |
 | CLI framework | Commander.js                     |
