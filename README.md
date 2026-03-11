@@ -16,6 +16,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/npm/v/sweteam?color=blue&label=npm" alt="npm version" />
+  <img src="https://img.shields.io/npm/dt/sweteam?color=brightgreen&label=downloads" alt="npm downloads" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen" alt="node version" />
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license" />
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome" />
