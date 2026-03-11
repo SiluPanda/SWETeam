@@ -48,7 +48,7 @@ const COL = { id: 14, repo: 22, goal: 26, status: 22, updated: 10 } as const;
 
 export function formatSessionTable(sessionList: EnrichedSession[]): string {
   if (sessionList.length === 0) {
-    return 'No sessions found. Use `sweteam create <repo> <goal>` to start one.';
+    return 'No sessions found. Use `sweteam create [repo]` or `/create [repo]` to start one.';
   }
 
   const border = chalk.blue;

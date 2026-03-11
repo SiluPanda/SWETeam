@@ -87,12 +87,3 @@ export function formatSummary(summary: SessionSummary): string {
 
   return lines.join('\n');
 }
-
-export async function handleEnter(sessionId: string): Promise<void> {
-  const summary = buildSessionSummary(sessionId);
-  if (!summary) {
-    throw new Error(`Session not found: ${sessionId}`);
-  }
-
-  console.log(formatSummary(summary));
-}
