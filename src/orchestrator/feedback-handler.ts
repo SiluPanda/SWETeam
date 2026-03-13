@@ -223,7 +223,7 @@ export function getIterationHistory(sessionId: string) {
     .all();
 }
 
-export async function handleFeedback(sessionId: string, feedbackText: string): Promise<void> {
+export async function handleFeedback(sessionId: string, feedbackText: string, images?: string[]): Promise<void> {
   const config = loadConfig();
   const session = getSession(sessionId);
   if (!session) throw new Error(`Session not found: ${sessionId}`);
@@ -285,6 +285,7 @@ export async function handleFeedback(sessionId: string, feedbackText: string): P
         prompt,
         cwd: session.repoLocalPath ?? '.',
         timeout: 0,
+        images,
         onOutput: (chunk: string) => {
           writeEvent(sessionId, { type: 'output', id: plannerId, chunk });
         },
@@ -410,9 +411,9 @@ export async function handleFeedback(sessionId: string, feedbackText: string): P
   const useParallel = config.execution.max_parallel > 1;
   try {
     if (useParallel) {
-      await runParallelOrchestrator(sessionId, repoPath, sessionBranch, callbacks);
+      await runParallelOrchestrator(sessionId, repoPath, sessionBranch, callbacks, { images });
     } else {
-      await runOrchestrator(sessionId, repoPath, sessionBranch, callbacks);
+      await runOrchestrator(sessionId, repoPath, sessionBranch, callbacks, { images });
     }
   } catch (err) {
     writeEvent(sessionId, { type: 'build-complete', id: 'build' });

@@ -43,6 +43,7 @@ export class ClaudeCodeAdapter implements AgentAdapter {
     cwd: string;
     timeout?: number;
     sessionId?: string;
+    images?: string[];
     onOutput?: (chunk: string) => void;
     onInputNeeded?: (promptText: string) => Promise<string | null>;
   }): Promise<AgentResult> {
@@ -50,9 +51,16 @@ export class ClaudeCodeAdapter implements AgentAdapter {
     const startTime = Date.now();
 
     return new Promise((resolve, reject) => {
+      const args = ['-p', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions'];
+      if (opts.images) {
+        for (const img of opts.images) {
+          args.push('--image', img);
+        }
+      }
+
       const proc = spawn(
         'claude',
-        ['-p', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions'],
+        args,
         {
           cwd: opts.cwd,
           stdio: ['pipe', 'pipe', 'pipe'],

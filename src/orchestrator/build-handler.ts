@@ -122,7 +122,7 @@ export function formatCompletionReport(
   return lines.join('\n');
 }
 
-export async function handleBuild(sessionId: string, planOutput: string): Promise<void> {
+export async function handleBuild(sessionId: string, planOutput: string, images?: string[]): Promise<void> {
   const db = getDb();
 
   // Parse the plan
@@ -249,8 +249,8 @@ export async function handleBuild(sessionId: string, planOutput: string): Promis
   let result: Awaited<ReturnType<typeof runOrchestrator>>;
   try {
     result = useParallel
-      ? await runParallelOrchestrator(sessionId, repoPath, sessionBranch, callbacks)
-      : await runOrchestrator(sessionId, repoPath, sessionBranch, callbacks);
+      ? await runParallelOrchestrator(sessionId, repoPath, sessionBranch, callbacks, { images })
+      : await runOrchestrator(sessionId, repoPath, sessionBranch, callbacks, { images });
   } catch (err) {
     writeEvent(sessionId, { type: 'build-complete', id: 'build' });
     // Build failed before completing — go back to planning so user can @build to retry

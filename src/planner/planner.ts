@@ -200,6 +200,7 @@ export async function invokeArchitect(
   tasksSummary: string,
   question: string,
   onOutput?: (chunk: string) => void,
+  images?: string[],
 ): Promise<string> {
   const config = loadConfig();
   const adapter = resolveAdapter(config.roles.planner, config);
@@ -223,6 +224,7 @@ export async function invokeArchitect(
     prompt,
     cwd: repoPath,
     timeout: 0,
+    images,
     onOutput,
   });
 
@@ -235,6 +237,7 @@ export async function invokePlanner(
   goal: string,
   repoPath: string,
   onOutput?: (chunk: string) => void,
+  images?: string[],
 ): Promise<string> {
   const config = loadConfig();
   const adapter = resolveAdapter(config.roles.planner, config);
@@ -250,6 +253,7 @@ export async function invokePlanner(
     prompt,
     cwd: repoPath,
     timeout: 20 * 60 * 1000, // 20-min safety net for truly hung processes
+    images,
     onOutput,
   });
 

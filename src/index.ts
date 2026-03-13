@@ -19,7 +19,8 @@ program
   .option('--coder <agent>', 'Override coder agent for this session')
   .option('--reviewer <agent>', 'Override reviewer agent for this session')
   .option('--parallel <count>', 'Override max parallel tasks', parseInt)
-  .option('--config <path>', 'Use custom config file path');
+  .option('--config <path>', 'Use custom config file path')
+  .option('--image <path...>', 'Image file paths to pass to the underlying CLI agent');
 
 // Apply global CLI overrides before any command runs
 program.hook('preAction', () => {
@@ -41,8 +42,10 @@ program
     const result = await handleCreate(repo);
     if (result) {
       const { runRepl } = await import('./repl/repl.js');
+      const globalOpts = program.opts();
       await runRepl({
         initialSession: { ...result, goal: '' },
+        images: globalOpts.image,
       });
     }
   });
@@ -70,6 +73,7 @@ program
         process.exit(1);
       }
       const { runRepl } = await import('./repl/repl.js');
+      const globalOpts = program.opts();
       await runRepl({
         initialSession: {
           id: session.id,
@@ -77,6 +81,7 @@ program
           goal: session.goal,
           repoLocalPath: session.repoLocalPath ?? '.',
         },
+        images: globalOpts.image,
       });
     } catch (err) {
       console.error(err instanceof Error ? err.message : String(err));

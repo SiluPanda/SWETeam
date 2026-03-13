@@ -61,6 +61,12 @@ export interface SessionHandlers {
   onCancel: () => Promise<void>;
   /** Show available session commands. */
   onHelp: () => void;
+  /** Add image file paths to the session context. */
+  onImage: (paths: string[]) => void;
+  /** Clear all session images. */
+  onImagesClear: () => void;
+  /** List currently attached images. */
+  onImagesList: () => void;
 }
 
 /**
@@ -87,6 +93,7 @@ export function createSessionHandlers(
   let currentGoal = goal;
   let buildInProgress = false;
   let planningInProgress = false;
+  let sessionImages: string[] = [];
   plannerStates.set(sessionId, { inProgress: false, startedAt: null, lastActivityAt: null });
 
   const handlers: SessionHandlers = {
@@ -114,7 +121,7 @@ export function createSessionHandlers(
       }
       if (session?.status === 'awaiting_feedback') {
         // Already awaiting feedback — route directly to feedback handler in background
-        handleFeedback(sessionId, text).catch((err) => {
+        handleFeedback(sessionId, text, sessionImages.length > 0 ? sessionImages : undefined).catch((err) => {
           const msg = err instanceof Error ? err.message : String(err);
           addMessage(sessionId, 'system', `Feedback failed: ${msg}`);
         });
@@ -157,7 +164,7 @@ export function createSessionHandlers(
         writeEvent(sessionId, { type: 'output', id: plannerId, chunk });
         const ps = plannerStates.get(sessionId);
         if (ps) ps.lastActivityAt = Date.now();
-      })
+      }, sessionImages.length > 0 ? sessionImages : undefined)
         .then((response) => {
           writeEvent(sessionId, { type: 'agent-end', id: plannerId, success: true });
 
@@ -236,8 +243,9 @@ export function createSessionHandlers(
       // The user sees output via the agent log watcher and can
       // detach (Escape/Enter) and reattach (/enter) freely.
       const planSnapshot = lastPlannerResponse;
+      const buildImages = sessionImages.length > 0 ? [...sessionImages] : undefined;
       buildInProgress = true;
-      handleBuild(sessionId, planSnapshot)
+      handleBuild(sessionId, planSnapshot, buildImages)
         .catch((err) => {
           const msg = err instanceof Error ? err.message : String(err);
           console.error(`\nBuild failed: ${friendlyError(msg)}\n`);
@@ -282,7 +290,7 @@ export function createSessionHandlers(
       }
 
       console.log('\nProcessing feedback...\n');
-      handleFeedback(sessionId, text).catch((err) => {
+      handleFeedback(sessionId, text, sessionImages.length > 0 ? sessionImages : undefined).catch((err) => {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`Feedback processing failed: ${msg}`);
         addMessage(sessionId, 'system', `Feedback failed: ${msg}`);
@@ -347,6 +355,7 @@ export function createSessionHandlers(
         (chunk) => {
           writeEvent(sessionId, { type: 'output', id: askId, chunk });
         },
+        sessionImages.length > 0 ? sessionImages : undefined,
       )
         .then((response) => {
           writeEvent(sessionId, { type: 'agent-end', id: askId, success: true });
@@ -379,6 +388,32 @@ export function createSessionHandlers(
 
     onHelp: (): void => {
       console.log(getHelpDisplay(sessionId));
+    },
+
+    onImage: (paths: string[]): void => {
+      for (const p of paths) {
+        if (!sessionImages.includes(p)) {
+          sessionImages.push(p);
+        }
+      }
+      console.log(`${sessionImages.length} image(s) attached to session.`);
+    },
+
+    onImagesClear: (): void => {
+      const count = sessionImages.length;
+      sessionImages = [];
+      console.log(`Cleared ${count} image(s) from session.`);
+    },
+
+    onImagesList: (): void => {
+      if (sessionImages.length === 0) {
+        console.log('No images attached. Use @image <path> to add images.');
+      } else {
+        console.log(`${sessionImages.length} image(s) attached:`);
+        for (const img of sessionImages) {
+          console.log(`  ${img}`);
+        }
+      }
     },
   };
 
@@ -422,6 +457,13 @@ export async function handleSessionCommand(
     console.log('Usage: @feedback <your feedback text>');
   } else if (trimmed.startsWith('@feedback ')) {
     await handlers.onFeedback(trimmed.slice('@feedback '.length));
+  } else if (trimmed === '@image' || trimmed === '@images') {
+    handlers.onImagesList();
+  } else if (trimmed === '@images clear') {
+    handlers.onImagesClear();
+  } else if (trimmed.startsWith('@image ')) {
+    const paths = trimmed.slice('@image '.length).trim().split(/\s+/);
+    handlers.onImage(paths);
   } else {
     console.log(`Unknown command: ${trimmed}. Type @help for session commands.`);
   }

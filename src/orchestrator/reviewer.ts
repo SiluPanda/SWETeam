@@ -77,6 +77,7 @@ export async function reviewTask(
   repoPath: string,
   onOutput?: (chunk: string) => void,
   onInputNeeded?: (promptText: string) => Promise<string | null>,
+  options?: { images?: string[] },
 ): Promise<ReviewResult> {
   const config = loadConfig();
   const adapter = resolveAdapter(config.roles.reviewer, config);
@@ -87,6 +88,7 @@ export async function reviewTask(
     prompt,
     cwd: repoPath,
     timeout: 0,
+    images: options?.images,
     onOutput,
     onInputNeeded,
   });
@@ -129,6 +131,8 @@ export async function reviewAndMerge(
     taskCwd?: string;
     /** Lock wrapper for serializing merge operations in parallel mode. */
     withMergeLock?: <T>(fn: () => Promise<T>) => Promise<T>;
+    /** Image file paths to pass to the underlying CLI agent. */
+    images?: string[];
   },
 ): Promise<{ merged: boolean; reviewResult: ReviewResult }> {
   const config = loadConfig();
@@ -140,7 +144,7 @@ export async function reviewAndMerge(
     // Always get a fresh diff for this review cycle
     const diff = git(['diff', `${sessionBranch}...${task.branchName}`], repoPath);
 
-    const reviewResult = await reviewTask(task, diff, repoPath, onOutput, onInputNeeded);
+    const reviewResult = await reviewTask(task, diff, repoPath, onOutput, onInputNeeded, { images: options?.images });
 
     // Update review info in DB
     db.update(tasks)
@@ -211,6 +215,7 @@ Summary: ${reviewResult.summary}`;
         prompt: fixPrompt,
         cwd: taskCwd,
         timeout: 0,
+        images: options?.images,
         onOutput,
         onInputNeeded,
       });

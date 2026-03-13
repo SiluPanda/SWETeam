@@ -495,6 +495,8 @@ export interface ReplOptions {
     goal: string;
     repoLocalPath: string;
   };
+  /** Image file paths to attach to the initial session. */
+  images?: string[];
 }
 
 export async function runRepl(opts?: ReplOptions): Promise<void> {
@@ -517,13 +519,17 @@ export async function runRepl(opts?: ReplOptions): Promise<void> {
   // Pre-activate session if provided
   if (opts?.initialSession) {
     const s = opts.initialSession;
+    const handlers = createSessionHandlers(s.id, s.repo, s.goal, s.repoLocalPath);
     activeSession = {
       id: s.id,
       repo: s.repo,
       repoPath: s.repoLocalPath,
-      handlers: createSessionHandlers(s.id, s.repo, s.goal, s.repoLocalPath),
+      handlers,
     };
     sidebar.setActiveSession(s.id);
+    if (opts.images && opts.images.length > 0) {
+      handlers.onImage(opts.images);
+    }
     console.log(`Session ${s.id} active. Describe what you want to build.\n`);
   }
 

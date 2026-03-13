@@ -313,6 +313,8 @@ export function getHelpDisplay(sessionId?: string): string {
   // @cancel only relevant during planning
   const cancelNote = status && status !== 'planning' ? na : '';
   lines.push(`  @cancel     Cancel the current planner run (session stays active)${cancelNote}`);
+  lines.push('  @image      Attach image file(s) to pass to the underlying CLI agent');
+  lines.push('  @images     List attached images (@images clear to remove all)');
   lines.push('  @stop       Stop this session');
   lines.push('  @help       Show this help message');
   lines.push('');

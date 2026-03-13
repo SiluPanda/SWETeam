@@ -129,6 +129,7 @@ export async function runOrchestrator(
   repoPath: string,
   sessionBranch: string,
   callbacks?: OrchestratorCallbacks | ((chunk: string) => void),
+  options?: { images?: string[] },
 ): Promise<OrchestratorResult> {
   // Support legacy single-function signature
   const cb: OrchestratorCallbacks =
@@ -196,7 +197,7 @@ export async function runOrchestrator(
       ? (promptText: string) => cb.onInputNeeded!(task.id, 'Coder', promptText)
       : undefined;
 
-    const result = await runTask(task, sessionBranch, repoPath, coderOutput, coderInputNeeded);
+    const result = await runTask(task, sessionBranch, repoPath, coderOutput, coderInputNeeded, { images: options?.images });
     cb.onAgentEnd?.(task.id, 'Coder', result.success);
 
     if (!result.success) {
@@ -231,6 +232,7 @@ export async function runOrchestrator(
       config.execution.max_review_cycles,
       reviewerOutput,
       reviewerInputNeeded,
+      { images: options?.images },
     );
     cb.onAgentEnd?.(task.id, 'Reviewer', reviewResult.merged);
 

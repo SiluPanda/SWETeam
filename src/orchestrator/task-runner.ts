@@ -82,7 +82,7 @@ export async function runTask(
   repoPath: string,
   onOutput?: (chunk: string) => void,
   onInputNeeded?: (promptText: string) => Promise<string | null>,
-  options?: { worktreePath?: string },
+  options?: { worktreePath?: string; images?: string[] },
 ): Promise<{ success: boolean; output: string; diff: string }> {
   const config = loadConfig();
   const db = getDb();
@@ -124,6 +124,7 @@ export async function runTask(
       prompt,
       cwd,
       timeout: 0,
+      images: options?.images,
       onOutput,
       onInputNeeded,
     });

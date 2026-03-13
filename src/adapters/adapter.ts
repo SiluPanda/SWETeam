@@ -20,6 +20,7 @@ export interface AgentAdapter {
     cwd: string;
     timeout?: number;
     sessionId?: string;
+    images?: string[];
     onOutput?: (chunk: string) => void;
     onInputNeeded?: (promptText: string) => Promise<string | null>;
   }): Promise<AgentResult>;

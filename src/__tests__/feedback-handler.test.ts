@@ -216,6 +216,6 @@ describe('feedback during planning — routes to planner', () => {
     await handlers.onFeedback('Fix the colors');
 
     // Verify it called handleFeedback (the iteration path), not the planner
-    expect(fbSpy).toHaveBeenCalledWith('s_plan_fb', 'Fix the colors');
+    expect(fbSpy).toHaveBeenCalledWith('s_plan_fb', 'Fix the colors', undefined);
   });
 });

@@ -20,6 +20,7 @@ export class OpenCodeAdapter implements AgentAdapter {
     cwd: string;
     timeout?: number;
     sessionId?: string;
+    images?: string[];
     onOutput?: (chunk: string) => void;
     onInputNeeded?: (promptText: string) => Promise<string | null>;
   }): Promise<AgentResult> {
@@ -27,7 +28,14 @@ export class OpenCodeAdapter implements AgentAdapter {
     const startTime = Date.now();
 
     return new Promise((resolve, reject) => {
-      const proc = spawn('opencode', ['--non-interactive', opts.prompt], {
+      const args = ['--non-interactive', opts.prompt];
+      if (opts.images) {
+        for (const img of opts.images) {
+          args.push('--image', img);
+        }
+      }
+
+      const proc = spawn('opencode', args, {
         cwd: opts.cwd,
         stdio: ['pipe', 'pipe', 'pipe'],
       });

@@ -69,6 +69,7 @@ export async function runParallelOrchestrator(
   repoPath: string,
   sessionBranch: string,
   callbacks?: OrchestratorCallbacks,
+  options?: { images?: string[] },
 ): Promise<OrchestratorResult> {
   const config = loadConfig();
   const maxParallel = config.execution.max_parallel;
@@ -149,6 +150,7 @@ export async function runParallelOrchestrator(
 
             const result = await runTask(task, sessionBranch, repoPath, coderOutput, coderInput, {
               worktreePath,
+              images: options?.images,
             });
             cb.onAgentEnd?.(task.id, 'Coder', result.success);
 
@@ -182,7 +184,7 @@ export async function runParallelOrchestrator(
               maxReviewCycles,
               reviewerOutput,
               reviewerInput,
-              { taskCwd: worktreePath, withMergeLock },
+              { taskCwd: worktreePath, withMergeLock, images: options?.images },
             );
             cb.onAgentEnd?.(task.id, 'Reviewer', reviewResult.merged);
 

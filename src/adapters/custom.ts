@@ -33,6 +33,7 @@ export class CustomAdapter implements AgentAdapter {
     cwd: string;
     timeout?: number;
     sessionId?: string;
+    images?: string[];
     onOutput?: (chunk: string) => void;
     onInputNeeded?: (promptText: string) => Promise<string | null>;
   }): Promise<AgentResult> {
@@ -43,6 +44,11 @@ export class CustomAdapter implements AgentAdapter {
 
     return new Promise((resolve, reject) => {
       const args = [...(this.config.args ?? [])];
+      if (opts.images) {
+        for (const img of opts.images) {
+          args.push('--image', img);
+        }
+      }
       let promptFile: string | undefined;
 
       if (promptVia === 'arg') {
