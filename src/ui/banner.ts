@@ -16,13 +16,14 @@ function shortCwd(): string {
   return cwd.startsWith(home) ? '~' + cwd.slice(home.length) : cwd;
 }
 
-// ── ASCII Art Logo (italic style) ───────────────────────────────────
+// ── ASCII Art Logo (block style, same as original SWE) ─────────────
 const LOGO_LINES = [
-  '                  __                        ',
-  '   _____      __ / /_  ___  ____ _ ____ ___ ',
-  '  / ___/| /| / // _ \\/ _ \\/ __ `// __ `__ \\',
-  ' (__  ) |/ |/ //  __/  __/ /_/ // / / / / /',
-  '/____/  |__/|__/\\___/\\___/\\__,_//_/ /_/ /_/ ',
+  ' ███████╗██╗    ██╗███████╗████████╗███████╗ █████╗ ███╗   ███╗',
+  ' ██╔════╝██║    ██║██╔════╝╚══██╔══╝██╔════╝██╔══██╗████╗ ████║',
+  ' ███████╗██║ █╗ ██║█████╗     ██║   █████╗  ███████║██╔████╔██║',
+  ' ╚════██║██║███╗██║██╔══╝     ██║   ██╔══╝  ██╔══██║██║╚██╔╝██║',
+  ' ███████║╚███╔███╔╝███████╗   ██║   ███████╗██║  ██║██║ ╚═╝ ██║',
+  ' ╚══════╝ ╚══╝╚══╝ ╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝',
 ];
 
 // ── Public API ──────────────────────────────────────────────────────
@@ -35,27 +36,46 @@ export interface RecentSession {
 export function renderBanner(sessions: RecentSession[] = []): string {
   const termW = process.stdout.columns || 80;
   const IW = Math.max(termW - 3, 60);
+
+  // ── Version label in top border ──
+  const versionLabel = ` sweteam v${VERSION} `;
+  const topDashes = Math.max(IW - 3 - vLen(versionLabel), 0);
+  const topLine =
+    border.primary(box.topLeft + box.horizontal.repeat(2) + ' ') +
+    brandGradient(versionLabel) +
+    border.primary(' ' + box.horizontal.repeat(topDashes - 1) + box.topRight);
+
+  const botLine = border.primary(box.bottomLeft + box.horizontal.repeat(IW) + box.bottomRight);
+  const outerBorder = border.primary(box.vertical);
+
+  const rows: string[] = [topLine];
+
+  // ── Full-width logo section ──
+  rows.push(outerBorder + rPad('', IW) + outerBorder);
+  for (const line of LOGO_LINES) {
+    rows.push(outerBorder + rPad('  ' + brandGradient(line), IW) + outerBorder);
+  }
+  rows.push(
+    outerBorder +
+      rPad(
+        `  ${c.muted(icons.dot)} ${c.subtle(`v${VERSION}`)} ${c.muted(icons.dot)} ${c.subtle('orchestrator')} ${c.muted(icons.dot)} ${c.dim(shortCwd())}`,
+        IW,
+      ) +
+      outerBorder,
+  );
+  rows.push(outerBorder + rPad('', IW) + outerBorder);
+
+  // ── Separator ──
+  rows.push(border.primary(box.teeLeft + box.horizontal.repeat(IW) + box.teeRight));
+
+  // ── Two-column bottom section: commands + sessions ──
   const LW = Math.min(46, Math.floor(IW * 0.45));
   const RW = IW - 1 - LW;
+  const midBorder = border.dim(box.vertical);
 
-  // ── Left column: logo + info ──
   const left: string[] = [''];
-
-  // Gradient logo
-  for (const line of LOGO_LINES) {
-    left.push('  ' + brandGradient(line));
-  }
+  left.push(' ' + c.brightBold('Quick Start'));
   left.push('');
-  left.push(
-    `  ${c.muted(icons.dot)} ${c.subtle(`v${VERSION}`)} ${c.muted(icons.dot)} ${c.subtle('orchestrator')}`,
-  );
-  left.push(`  ${c.muted(icons.dot)} ${c.dim(shortCwd())}`);
-  left.push('');
-
-  // ── Right column: commands + sessions ──
-  const right: string[] = [''];
-  right.push(' ' + c.brightBold('Quick Start'));
-  right.push('');
 
   const cmds = [
     { key: '/create', arg: ' [repo]', desc: 'Start a new session' },
@@ -67,11 +87,13 @@ export function renderBanner(sessions: RecentSession[] = []): string {
   for (const cmd of cmds) {
     const cmdStr = c.cyan(cmd.key) + c.muted(cmd.arg);
     const cmdLen = vLen(cmdStr);
-    const gap = Math.max(1, RW - cmdLen - cmd.desc.length - 4);
-    right.push(` ${c.muted(icons.pointer)} ${cmdStr}${' '.repeat(gap)}${c.subtle(cmd.desc)}`);
+    const gap = Math.max(1, LW - cmdLen - cmd.desc.length - 4);
+    left.push(` ${c.muted(icons.pointer)} ${cmdStr}${' '.repeat(gap)}${c.subtle(cmd.desc)}`);
   }
+  left.push('');
 
-  right.push('');
+  // ── Right column: recent sessions ──
+  const right: string[] = [''];
   right.push(' ' + divider(RW - 2, 'recent'));
   right.push('');
 
@@ -95,20 +117,7 @@ export function renderBanner(sessions: RecentSession[] = []): string {
   while (left.length < h) left.push('');
   while (right.length < h) right.push('');
 
-  // ── Assemble box ──
-  const versionLabel = ` sweteam v${VERSION} `;
-  const topDashes = Math.max(IW - 3 - vLen(versionLabel), 0);
-  const topLine =
-    border.primary(box.topLeft + box.horizontal.repeat(2) + ' ') +
-    brandGradient(versionLabel) +
-    border.primary(' ' + box.horizontal.repeat(topDashes - 1) + box.topRight);
-
-  const botLine = border.primary(box.bottomLeft + box.horizontal.repeat(IW) + box.bottomRight);
-
-  const midBorder = border.dim(box.vertical);
-  const outerBorder = border.primary(box.vertical);
-
-  const rows: string[] = [topLine];
+  // ── Assemble bottom rows ──
   for (let i = 0; i < h; i++) {
     rows.push(outerBorder + rPad(left[i], LW) + midBorder + rPad(right[i], RW) + outerBorder);
   }
